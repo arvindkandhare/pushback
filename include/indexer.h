@@ -13,21 +13,23 @@
 #include "pto.h"
 
 /**
- * Scoring direction enumeration
+ * Scoring mode enumeration - defines what happens when execution button is pressed
  */
-enum class ScoringDirection {
-    FRONT,  ///< Score towards front of robot
-    BACK,   ///< Score towards back of robot (using PTO)
-    NONE    ///< No direction selected
+enum class ScoringMode {
+    COLLECTION,     ///< Collection/intake mode - run for ball collection only
+    MID_GOAL,       ///< Mid level scoring 
+    IMMEDIATE,      ///< Immediate scoring from intake position
+    TOP_GOAL,       ///< Top level scoring
+    NONE            ///< No mode selected
 };
 
 /**
- * Scoring level enumeration
+ * Execution direction enumeration - which button executes the selected mode
  */
-enum class ScoringLevel {
-    LONG_GOAL,  ///< Top scoring (higher goal)
-    MID_GOAL,   ///< Bottom scoring (lower goal)
-    NONE        ///< No level selected
+enum class ExecutionDirection {
+    FRONT,  ///< Execute with front indexer (R2)
+    BACK,   ///< Execute with back indexer (R1)
+    NONE    ///< No execution yet
 };
 
 /**
@@ -44,14 +46,17 @@ class IndexerSystem {
 private:
     // Motors
     pros::Motor input_motor;        ///< 11W motor for ball intake at bottom
-    pros::Motor front_indexer;      ///< Dedicated motor for front indexer
+    pros::Motor top_indexer;        ///< Top indexer motor (shared between front/back top scoring)
+    
+    // Pneumatic systems
+    pros::adi::Pneumatics front_flap;  ///< Pneumatic control for front scoring flap
     
     // PTO system reference for back indexer control
     PTO* pto_system;
     
     // Current scoring configuration
-    ScoringDirection current_direction;  ///< Currently selected scoring direction
-    ScoringLevel current_level;          ///< Currently selected scoring level
+    ScoringMode current_mode;            ///< Currently selected scoring mode
+    ExecutionDirection last_direction;   ///< Last execution direction used
     
     // State tracking
     bool scoring_active;            ///< True when scoring sequence is running
@@ -60,12 +65,12 @@ private:
     bool input_motor_active;        ///< True when input motor is running
     
     // Button state tracking (for edge detection)
-    bool last_front_button;
-    bool last_back_button;
-    bool last_long_goal_button;
+    bool last_collection_button;
     bool last_mid_goal_button;
-    bool last_execute_button;
-    bool last_input_button;
+    bool last_immediate_button;
+    bool last_top_goal_button;
+    bool last_front_execute_button;
+    bool last_back_execute_button;
 
 public:
     /**
@@ -75,30 +80,44 @@ public:
     IndexerSystem(PTO* pto);
 
     /**
-     * Set scoring direction to front
+     * Set scoring mode to collection/intake
      */
-    void setFrontScoring();
+    void setCollectionMode();
 
     /**
-     * Set scoring direction to back (requires PTO in scorer mode)
+     * Set scoring mode to mid goal scoring
      */
-    void setBackScoring();
+    void setMidGoalMode();
 
     /**
-     * Set scoring level to long goal (top scoring)
+     * Set scoring mode to immediate scoring from intake
      */
-    void setLongGoal();
+    void setImmediateMode();
 
     /**
-     * Set scoring level to mid goal (bottom scoring)
+     * Set scoring mode to top goal scoring
      */
-    void setMidGoal();
+    void setTopGoalMode();
 
     /**
-     * Execute scoring sequence based on current direction and level
-     * Will automatically configure PTO if needed for back scoring
+     * Execute selected mode with front indexer (R2 button)
      */
-    void executeScoring();
+    void executeFront();
+
+    /**
+     * Execute selected mode with back indexer (R1 button)
+     */
+    void executeBack();
+
+    /**
+     * Open front flap to allow balls to score
+     */
+    void openFrontFlap();
+
+    /**
+     * Close front flap to hold balls against it
+     */
+    void closeFrontFlap();
 
     /**
      * Start input motor for ball intake
@@ -116,16 +135,16 @@ public:
     void stopAll();
 
     /**
-     * Get current scoring direction
-     * @return Current scoring direction
+     * Get current scoring mode
+     * @return Current scoring mode
      */
-    ScoringDirection getCurrentDirection() const;
+    ScoringMode getCurrentMode() const;
 
     /**
-     * Get current scoring level  
-     * @return Current scoring level
+     * Get last execution direction
+     * @return Last execution direction used
      */
-    ScoringLevel getCurrentLevel() const;
+    ExecutionDirection getLastDirection() const;
 
     /**
      * Check if scoring sequence is currently active
@@ -147,16 +166,16 @@ public:
     void update(pros::Controller& controller);
 
     /**
-     * Get string representation of current direction for debugging
+     * Get string representation of current mode for debugging
+     * @return "Collection", "Mid Goal", "Immediate", "Top Goal", or "None"
+     */
+    const char* getModeString() const;
+
+    /**
+     * Get string representation of last direction for debugging
      * @return "Front", "Back", or "None"
      */
     const char* getDirectionString() const;
-
-    /**
-     * Get string representation of current level for debugging
-     * @return "Long Goal", "Mid Goal", or "None"
-     */
-    const char* getLevelString() const;
 
     // Testing functions for individual indexer control
     /**
@@ -183,27 +202,27 @@ public:
 
 private:
     /**
-     * Run front indexer at specified speed and direction
+     * Run left indexer (left middle motor via PTO) for front operations
      * @param speed Motor speed in RPM (positive or negative)
      */
-    void runFrontIndexer(int speed);
+    void runLeftIndexer(int speed);
 
     /**
-     * Run back indexer at specified speed and direction
-     * Requires PTO to be in scorer mode
+     * Run right indexer (right middle motor via PTO) for back operations
      * @param speed Motor speed in RPM (positive or negative)
      */
-    void runBackIndexer(int speed);
+    void runRightIndexer(int speed);
 
     /**
-     * Stop front indexer
+     * Run top indexer motor (shared for front/back top scoring)
+     * @param speed Motor speed in RPM (positive or negative)
      */
-    void stopFrontIndexer();
+    void runTopIndexer(int speed);
 
     /**
-     * Stop back indexer
+     * Stop top indexer motor
      */
-    void stopBackIndexer();
+    void stopTopIndexer();
 
     /**
      * Check if scoring sequence has timed out

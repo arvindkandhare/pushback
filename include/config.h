@@ -26,7 +26,7 @@
 
 // Indexer and intake system motors
 #define INPUT_MOTOR_PORT        1   // 11W motor at bottom for ball intake
-#define FRONT_INDEXER_PORT      8   // Dedicated motor for front indexer
+#define TOP_INDEXER_PORT        8   // Top indexer motor (shared: front top OR back top)
 
 /* vertical odom 9
 horizontal 10
@@ -42,6 +42,10 @@ gyro 13
 #define PTO_LEFT_PNEUMATIC      'A'  // ADI port A
 #define PTO_RIGHT_PNEUMATIC     'B'  // ADI port B
 
+// Front scoring flap pneumatic
+// Controls flap that holds balls for front scoring
+#define FRONT_FLAP_PNEUMATIC    'C'  // ADI port C
+
 // =============================================================================
 // CONTROLLER CONFIGURATION
 // =============================================================================
@@ -50,20 +54,23 @@ gyro 13
 #define TANK_DRIVE_LEFT_STICK   pros::E_CONTROLLER_ANALOG_LEFT_Y
 #define TANK_DRIVE_RIGHT_STICK  pros::E_CONTROLLER_ANALOG_RIGHT_Y
 
-// PTO control button
-#define PTO_TOGGLE_BUTTON       pros::E_CONTROLLER_DIGITAL_R1
+// NEW CONTROL SCHEME: Two-step scoring system
+// Step 1: Mode selection buttons (Y/A/B/X)
+#define COLLECTION_MODE_BUTTON     pros::E_CONTROLLER_DIGITAL_Y   // Collection/intake mode
+#define MID_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_A   // Mid level scoring
+#define IMMEDIATE_SCORING_BUTTON   pros::E_CONTROLLER_DIGITAL_B   // Immediate scoring from intake
+#define TOP_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_X   // Top level scoring
 
-// Indexer and scoring system controls
-#define INPUT_MOTOR_BUTTON      pros::E_CONTROLLER_DIGITAL_R2  // Ball intake
-#define FRONT_SCORING_BUTTON    pros::E_CONTROLLER_DIGITAL_L1  // Select front scoring
-#define BACK_SCORING_BUTTON     pros::E_CONTROLLER_DIGITAL_L2  // Select back scoring
-#define LONG_GOAL_BUTTON        pros::E_CONTROLLER_DIGITAL_X   // Top scoring (long goal)
-#define MID_GOAL_BUTTON         pros::E_CONTROLLER_DIGITAL_B   // Bottom scoring (mid goal)
-#define EXECUTE_SCORING_BUTTON  pros::E_CONTROLLER_DIGITAL_A   // Execute scoring sequence
+// Step 2: Execution buttons (R1/R2)
+#define BACK_EXECUTE_BUTTON       pros::E_CONTROLLER_DIGITAL_R1  // Execute selected mode - back
+#define FRONT_EXECUTE_BUTTON      pros::E_CONTROLLER_DIGITAL_R2  // Execute selected mode - front
 
 // Additional controls for testing individual indexers
-#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_Y   // Test left indexer
-#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_UP  // Test right indexer
+#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_L1   // Test left indexer
+#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_L2   // Test right indexer
+
+// PTO control (if still needed) - moved to UP button
+#define PTO_TOGGLE_BUTTON         pros::E_CONTROLLER_DIGITAL_UP   // PTO toggle (optional)
 
 // =============================================================================
 // MOTOR CONFIGURATION CONSTANTS
@@ -87,8 +94,15 @@ gyro 13
 #define PTO_EXTENDED    true   // Extended = drivetrain mode (3-wheel drive)
 #define PTO_RETRACTED   false  // Retracted = scorer mode (2-wheel drive, middle wheels for scorer)
 
+// Front flap pneumatic states
+#define FRONT_FLAP_OPEN   true   // Open = balls can score through front
+#define FRONT_FLAP_CLOSED false  // Closed = balls held against flap
+
 // Default PTO state on robot startup
 #define PTO_DEFAULT_STATE PTO_EXTENDED
+
+// Default front flap state on robot startup
+#define FRONT_FLAP_DEFAULT_STATE FRONT_FLAP_CLOSED
 
 // =============================================================================
 // DRIVE CONFIGURATION

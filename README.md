@@ -8,7 +8,10 @@ This document provides a complete reference for all controller button mappings a
 - **Wheels**: 3.75" omni wheels
 - **Motors**: 11W motors with green cartridges (18:1 gearing)
 - **PTO System**: Pneumatic Power Take-Off for switching middle wheels between drive and scorer modes
-- **Scoring System**: Front indexer + back indexer (via PTO middle wheels)
+- **Scoring System**: 
+  - **Front**: Left middle motor (via PTO) + pneumatic flap + top indexer motor (for top goals)
+  - **Back**: Right middle motor (via PTO) + top indexer motor (for top goals)
+  - **Storage**: Only on front side with pneumatic flap control
 
 ---
 
@@ -25,23 +28,29 @@ This document provides a complete reference for all controller button mappings a
 #### 🚗 Drivetrain & PTO Controls
 | Button | Function | Description |
 |--------|----------|-------------|
-| **R1** | PTO Toggle | Switch between drivetrain mode (3-wheel) and scorer mode (2-wheel) |
+| **UP** | PTO Toggle | Switch between drivetrain mode (3-wheel) and scorer mode (2-wheel) |
 
-#### ⚽ Scoring System Controls
+#### ⚽ New Two-Step Scoring System
+
+**Step 1: Mode Selection**
 | Button | Function | Description |
 |--------|----------|-------------|
-| **L1** | Front Scoring | Select front scoring direction |
-| **L2** | Back Scoring | Select back scoring direction |
-| **X** | Long Goal | Select top scoring level (higher goal) |
-| **B** | Mid Goal | Select bottom scoring level (lower goal) |
-| **A** | Execute Scoring | Start scoring sequence with selected direction & level |
-| **R2** | Ball Intake | Hold to run input motor for ball collection |
+| **Y** | Collection Mode | Collection/intake mode (auto-starts intake motor) |
+| **A** | Mid Goal | Select mid-level scoring |
+| **B** | Immediate Scoring | Immediate scoring from intake (auto-starts intake motor) |
+| **X** | Top Goal | Select top-level scoring |
+
+**Step 2: Execution (Toggle)**
+| Button | Function | Description |
+|--------|----------|-------------|
+| **R1** | Back Execute/Stop | **TOGGLE**: Press to start back execution, press again to stop |
+| **R2** | Front Execute/Stop | **TOGGLE**: Press to start front execution, press again to stop |
 
 #### 🔧 Testing Controls
 | Button | Function | Description |
 |--------|----------|-------------|
-| **Y** | Test Left Indexer | Cycle through: Forward → Reverse → Stop |
-| **UP** | Test Right Indexer | Cycle through: Forward → Reverse → Stop |
+| **L1** | Test Left Indexer | Cycle through: Forward → Reverse → Stop |
+| **L2** | Test Right Indexer | Cycle through: Forward → Reverse → Stop |
 
 ---
 
@@ -51,13 +60,27 @@ This document provides a complete reference for all controller button mappings a
 - **Status**: 3-wheel drive per side
 - **Middle Wheels**: Connected to drivetrain
 - **Use**: Normal driving with maximum traction
-- **Toggle**: Press **R1** to switch to Scorer Mode
+- **Toggle**: Press **UP** to switch to Scorer Mode
 
 ### Scorer Mode (PTO Retracted)
 - **Status**: 2-wheel drive per side
 - **Middle Wheels**: Connected to scoring mechanism
 - **Use**: Scoring operations and ball handling
-- **Toggle**: Press **R1** to switch to Drive Mode
+- **Toggle**: Press **UP** to switch to Drive Mode
+
+## 🔧 Front Scoring Mechanism
+
+### Pneumatic Flap System
+- **Purpose**: Controls ball release for front scoring
+- **Default State**: **CLOSED** - balls are held against the flap
+- **During Front Scoring**: **OPENS** automatically to release balls
+- **After Scoring**: **CLOSES** automatically to hold new balls
+
+### Key Differences:
+| Direction | Mechanism | Behavior |
+|-----------|-----------|----------|
+| **Front (R2)** | Pneumatic flap control | Opens flap → score → closes flap |
+| **Back (R1)** | Direct scoring | No flap - direct ball release |
 
 ---
 
@@ -65,47 +88,47 @@ This document provides a complete reference for all controller button mappings a
 
 ### Step-by-Step Scoring Process:
 
-1. **Switch to Scorer Mode**
-   - Press **R1** to engage PTO scorer mode
+1. **Switch to Scorer Mode (Optional)**
+   - Press **UP** to engage PTO scorer mode if needed
    - LCD will show: "PTO Mode: Scorer (2-wheel drive)"
 
-2. **Select Scoring Direction**
-   - Press **L1** for front scoring
-   - Press **L2** for back scoring
+2. **Select Scoring Mode**
+   - Press **Y** for Collection mode (auto-starts intake motor)
+   - Press **A** for Mid Goal scoring
+   - Press **B** for Immediate scoring (auto-starts intake motor)
+   - Press **X** for Top Goal scoring
    - Controller will rumble and display selection
 
-3. **Select Scoring Level**
-   - Press **X** for long goal (top scoring)
-   - Press **B** for mid goal (bottom scoring)
-   - Controller will rumble and display selection
-
-4. **Execute Scoring**
-   - Press **A** to start scoring sequence
-   - Motors will run for 2 seconds automatically
-   - Controller will rumble twice to confirm
-
-5. **Ball Intake (Optional)**
-   - Hold **R2** to run intake motor
-   - Release to stop intake
+3. **Execute Scoring (Toggle Control)**
+   - Press **R1** to START back execution (direct scoring)
+   - Press **R1 again** to STOP back execution
+   - Press **R2** to START front execution (opens flap → scores → closes flap)  
+   - Press **R2 again** to STOP front execution
+   - Controller rumbles: Double for start ("..")，Triple for stop ("---")
+   - Front flap automatically opens/closes for front scoring
 
 ### Quick Reference Combinations:
-| Direction | Level | Buttons | Result |
-|-----------|--------|---------|---------|
-| Front | Long Goal | L1 → X → A | Front indexer runs forward |
-| Front | Mid Goal | L1 → B → A | Front indexer runs reverse |
-| Back | Long Goal | L2 → X → A | Right middle wheel runs forward |
-| Back | Mid Goal | L2 → B → A | Right middle wheel runs reverse |
+| Mode | Direction | Buttons | Result |
+|------|-----------|---------|---------|
+| Collection | Front | Y → R2 (toggle) | START/STOP left middle + intake |
+| Collection | Back | Y → R1 (toggle) | START/STOP right middle + intake |
+| Mid Goal | Front | A → R2 (toggle) | START/STOP left middle + flap |
+| Mid Goal | Back | A → R1 (toggle) | START/STOP right middle scoring |
+| Immediate | Front | B → R2 (toggle) | START/STOP left middle + intake |
+| Immediate | Back | B → R1 (toggle) | START/STOP right middle + intake |
+| Top Goal | Front | X → R2 (toggle) | START/STOP left middle + top indexer |
+| Top Goal | Back | X → R1 (toggle) | START/STOP right middle + top indexer |
 
 ---
 
 ## 🔧 Testing & Diagnostics
 
 ### Individual Motor Testing:
-- **Y Button**: Test left middle wheel
+- **L1 Button**: Test left middle wheel
   - 1st press: Forward at 100 RPM
   - 2nd press: Reverse at 100 RPM  
   - 3rd press: Stop
-- **UP Button**: Test right middle wheel
+- **L2 Button**: Test right middle wheel
   - 1st press: Forward at 100 RPM
   - 2nd press: Reverse at 100 RPM
   - 3rd press: Stop
@@ -128,15 +151,14 @@ This document provides a complete reference for all controller button mappings a
 5. **Middle wheels are controlled by different systems** based on PTO state
 
 ### Troubleshooting:
-- **Motors not responding**: Check PTO mode with R1
-- **Scoring not working**: Ensure both direction (L1/L2) and level (X/B) are selected
-- **Intake not working**: Hold R2 continuously, check for timeout
+- **Motors not responding**: Check PTO mode with UP button
+- **Scoring not working**: Ensure mode is selected (Y/A/B/X) before execution (R1/R2)
 - **Drive issues**: Verify joystick deadzone (>10) and PTO mode
 
 ### Motor Speeds:
-- **Long Goal Scoring**: 150 RPM
+- **Top Goal Scoring**: 150 RPM
 - **Mid Goal Scoring**: 100 RPM
-- **Ball Intake**: 120 RPM
+- **Collection/Immediate**: 120 RPM
 - **Testing**: 100 RPM (forward/reverse)
 
 ---
@@ -168,20 +190,23 @@ All button mappings are defined in `include/config.h` and can be easily modified
 #define TANK_DRIVE_LEFT_STICK   pros::E_CONTROLLER_ANALOG_LEFT_Y
 #define TANK_DRIVE_RIGHT_STICK  pros::E_CONTROLLER_ANALOG_RIGHT_Y
 
-// PTO control button
-#define PTO_TOGGLE_BUTTON       pros::E_CONTROLLER_DIGITAL_R1
+// NEW CONTROL SCHEME: Two-step scoring system
+// Step 1: Mode selection buttons (Y/A/B/X)
+#define COLLECTION_MODE_BUTTON     pros::E_CONTROLLER_DIGITAL_Y   // Collection/intake mode
+#define MID_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_A   // Mid level scoring
+#define IMMEDIATE_SCORING_BUTTON   pros::E_CONTROLLER_DIGITAL_B   // Immediate scoring from intake
+#define TOP_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_X   // Top level scoring
 
-// Indexer and scoring system controls
-#define INPUT_MOTOR_BUTTON      pros::E_CONTROLLER_DIGITAL_R2
-#define FRONT_SCORING_BUTTON    pros::E_CONTROLLER_DIGITAL_L1
-#define BACK_SCORING_BUTTON     pros::E_CONTROLLER_DIGITAL_L2
-#define LONG_GOAL_BUTTON        pros::E_CONTROLLER_DIGITAL_X
-#define MID_GOAL_BUTTON         pros::E_CONTROLLER_DIGITAL_B
-#define EXECUTE_SCORING_BUTTON  pros::E_CONTROLLER_DIGITAL_A
+// Step 2: Execution buttons (R1/R2)
+#define BACK_EXECUTE_BUTTON       pros::E_CONTROLLER_DIGITAL_R1  // Execute selected mode - back
+#define FRONT_EXECUTE_BUTTON      pros::E_CONTROLLER_DIGITAL_R2  // Execute selected mode - front
 
-// Testing controls
-#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_Y
-#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_UP
+// Additional controls for testing individual indexers
+#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_L1   // Test left indexer
+#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_L2   // Test right indexer
+
+// PTO control (if still needed) - moved to UP button
+#define PTO_TOGGLE_BUTTON         pros::E_CONTROLLER_DIGITAL_UP   // PTO toggle (optional)
 ```
 
 ---
