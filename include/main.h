@@ -42,6 +42,7 @@
 #include "config.h"
 #include "pto.h"
 #include "drivetrain.h"
+#include "intake.h"
 //#include "okapi/api.hpp"
 
 /**

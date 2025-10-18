@@ -123,6 +123,7 @@ void opcontrol() {
 	PTO pto_system;
 	Drivetrain drivetrain(&pto_system);
 	IndexerSystem indexer_system(&pto_system);
+	Intake intake_system;  // New intake mechanism
 	
 	// Initialize LCD for opcontrol mode
 	pros::lcd::set_text(0, "OPCONTROL ACTIVE");
@@ -158,6 +159,7 @@ void opcontrol() {
 		drivetrain.update(master);
 		pto_system.update(master);
 		indexer_system.update(master);
+		intake_system.update(master);  // Update intake system
 		
 		pros::delay(20);  // 50Hz loop
 	}

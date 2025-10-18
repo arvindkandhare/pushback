@@ -47,6 +47,10 @@ gyro 13
 // Controls flap that holds balls for front scoring
 #define FRONT_FLAP_PNEUMATIC    'C'  // ADI port C
 
+// Intake mechanism pneumatic
+// Controls intake extension/retraction for collecting balls from tubes
+#define INTAKE_PNEUMATIC        'D'  // ADI port D
+
 // =============================================================================
 // CONTROLLER CONFIGURATION
 // =============================================================================
@@ -72,6 +76,9 @@ gyro 13
 
 // PTO control (if still needed) - moved to UP button
 #define PTO_TOGGLE_BUTTON         pros::E_CONTROLLER_DIGITAL_UP   // PTO toggle (optional)
+
+// Intake mechanism control - DOWN button
+#define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (extend/retract)
 
 // =============================================================================
 // MOTOR CONFIGURATION CONSTANTS
@@ -104,6 +111,17 @@ gyro 13
 
 // Default front flap state on robot startup
 #define FRONT_FLAP_DEFAULT_STATE FRONT_FLAP_CLOSED
+
+// =============================================================================
+// INTAKE MECHANISM CONFIGURATION
+// =============================================================================
+
+// Intake pneumatic states
+#define INTAKE_EXTENDED   true   // Extended = intake mechanism deployed for ball collection
+#define INTAKE_RETRACTED  false  // Retracted = intake mechanism stored (default position)
+
+// Default intake state on robot startup
+#define INTAKE_DEFAULT_STATE INTAKE_RETRACTED
 
 // =============================================================================
 // DRIVE CONFIGURATION

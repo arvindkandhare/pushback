@@ -8,6 +8,7 @@ This document provides a complete reference for all controller button mappings a
 - **Wheels**: 3.75" omni wheels
 - **Motors**: 11W motors with green cartridges (18:1 gearing)
 - **PTO System**: Pneumatic Power Take-Off for switching middle wheels between drive and scorer modes
+- **Intake System**: Pneumatic intake mechanism for collecting balls from tubes
 - **Scoring System**: 
   - **Front**: Left middle motor (via PTO) + pneumatic flap + top indexer motor (for top goals)
   - **Back**: Right middle motor (via PTO) + top indexer motor (for top goals) - *Both motors reversed for proper direction*
@@ -29,6 +30,11 @@ This document provides a complete reference for all controller button mappings a
 | Button | Function | Description |
 |--------|----------|-------------|
 | **UP** | PTO Toggle | Switch between drivetrain mode (3-wheel) and scorer mode (2-wheel) |
+
+#### 🍯 Intake Mechanism Controls
+| Button | Function | Description |
+|--------|----------|-------------|
+| **DOWN** | Intake Toggle | **TOGGLE**: Press to extend/retract intake mechanism for ball collection |
 
 #### ⚽ New Two-Step Scoring System
 
@@ -68,6 +74,21 @@ This document provides a complete reference for all controller button mappings a
 - **Use**: Scoring operations and ball handling
 - **Toggle**: Press **UP** to switch to Drive Mode
 
+## 🍯 Intake Mechanism
+
+### Pneumatic Intake System
+- **Purpose**: Helps collect balls from intake tubes
+- **Default State**: **RETRACTED** - intake mechanism is stored
+- **Extended State**: **EXTENDED** - intake mechanism is deployed for ball collection
+- **Control**: Press **DOWN** button to toggle between retracted and extended
+- **Feedback**: Controller rumbles with ".." pattern when toggled
+
+### Intake Operation:
+| State | Description | Use Case |
+|-------|-------------|----------|
+| **Retracted (Default)** | Intake stored/out of the way | Normal driving and maneuvering |
+| **Extended** | Intake deployed for collection | Collecting balls from intake tubes |
+
 ## 🔧 Front Scoring Mechanism
 
 ### Pneumatic Flap System
@@ -92,20 +113,30 @@ This document provides a complete reference for all controller button mappings a
    - Press **UP** to engage PTO scorer mode if needed
    - LCD will show: "PTO Mode: Scorer (2-wheel drive)"
 
-2. **Select Scoring Mode**
+2. **Deploy Intake (if needed)**
+   - Press **DOWN** to extend intake mechanism for ball collection
+   - Controller will rumble with ".." pattern
+   - Console will show: "Intake: EXTENDED (deployed for collection)"
+
+3. **Select Scoring Mode**
    - Press **Y** for Collection mode (auto-starts intake motor)
    - Press **A** for Mid Goal scoring
    - Press **B** for Immediate scoring (auto-starts intake motor)
    - Press **X** for Top Goal scoring
    - Controller will rumble and display selection
 
-3. **Execute Scoring (Toggle Control)**
+4. **Execute Scoring (Toggle Control)**
    - Press **R1** to START back execution (direct scoring)
    - Press **R1 again** to STOP back execution
    - Press **R2** to START front execution (opens flap → scores → closes flap)  
    - Press **R2 again** to STOP front execution
    - Controller rumbles: Double for start ("..")，Triple for stop ("---")
    - Front flap automatically opens/closes for front scoring
+
+5. **Retract Intake (when done)**
+   - Press **DOWN** to retract intake mechanism back to stored position
+   - Controller will rumble with ".." pattern
+   - Console will show: "Intake: RETRACTED (stored position)"
 
 ### Quick Reference Combinations:
 | Mode | Direction | Buttons | Result |
@@ -118,6 +149,12 @@ This document provides a complete reference for all controller button mappings a
 | Immediate | Back | B → R1 (toggle) | START/STOP right middle + intake |
 | Top Goal | Front | X → R2 (toggle) | START/STOP left middle + top indexer |
 | Top Goal | Back | X → R1 (toggle) | START/STOP right middle + top indexer |
+
+### Intake Operation:
+| Function | Button | Result |
+|----------|--------|---------|
+| Deploy Intake | DOWN | Extend intake mechanism for ball collection |
+| Store Intake | DOWN (again) | Retract intake mechanism to stored position |
 
 ---
 
@@ -135,6 +172,10 @@ This document provides a complete reference for all controller button mappings a
 
 ### System Feedback:
 - **Controller Rumble**: Confirms button presses
+  - PTO toggle: "." (single pulse)
+  - Intake toggle: ".." (double pulse)
+  - Scoring start: ".." (double pulse)
+  - Scoring stop: "---" (triple pulse)
 - **LCD Display**: Shows current mode and status
 - **Controller Screen**: Displays current selections
 - **Terminal Output**: Debug information (development mode)
@@ -149,11 +190,13 @@ This document provides a complete reference for all controller button mappings a
 3. **Input motor has 5-second timeout** for safety
 4. **Scoring sequences run for 2 seconds** automatically
 5. **Middle wheels are controlled by different systems** based on PTO state
+6. **Intake mechanism starts retracted** for safety and clearance
 
 ### Troubleshooting:
 - **Motors not responding**: Check PTO mode with UP button
 - **Scoring not working**: Ensure mode is selected (Y/A/B/X) before execution (R1/R2)
 - **Drive issues**: Verify joystick deadzone (>10) and PTO mode
+- **Intake not working**: Check pneumatic connections and ADI port D
 
 ### Motor Speeds:
 - **Top Goal Scoring**: 150 RPM
@@ -170,11 +213,13 @@ pushback_official/
 │   ├── main.cpp          # Main control loop and opcontrol
 │   ├── drivetrain.cpp    # Tank drive and PTO motor control
 │   ├── pto.cpp           # Pneumatic system control
+│   ├── intake.cpp        # Intake mechanism pneumatic control
 │   └── indexer.cpp       # Scoring and intake system
 ├── include/
 │   ├── config.h          # Button mappings and constants
 │   ├── drivetrain.h      # Drivetrain class definition
 │   ├── pto.h            # PTO class definition
+│   ├── intake.h         # Intake class definition
 │   └── indexer.h        # IndexerSystem class definition
 └── README.md            # This file
 ```
@@ -207,10 +252,26 @@ All button mappings are defined in `include/config.h` and can be easily modified
 
 // PTO control (if still needed) - moved to UP button
 #define PTO_TOGGLE_BUTTON         pros::E_CONTROLLER_DIGITAL_UP   // PTO toggle (optional)
+
+// Intake mechanism control - DOWN button
+#define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (extend/retract)
+```
+
+### Pneumatic Configuration:
+```cpp
+// Pneumatic ports (ADI)
+#define PTO_LEFT_PNEUMATIC      'A'  // ADI port A
+#define PTO_RIGHT_PNEUMATIC     'B'  // ADI port B
+#define FRONT_FLAP_PNEUMATIC    'C'  // ADI port C
+#define INTAKE_PNEUMATIC        'D'  // ADI port D - NEW
+
+// Intake pneumatic states
+#define INTAKE_EXTENDED   true   // Extended = intake mechanism deployed
+#define INTAKE_RETRACTED  false  // Retracted = intake mechanism stored (default)
 ```
 
 ---
 
-*Last Updated: October 11, 2025*  
+*Last Updated: October 18, 2025*  
 *PROS Version: 4.2.1*  
 *Robot: Pushback Official*
