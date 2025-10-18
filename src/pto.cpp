@@ -28,7 +28,7 @@ void PTO::setDrivetrainMode() {
     current_state = PTO_EXTENDED;
     
     // Debug output
-    pros::lcd::print(0, "PTO Mode: Drivetrain (3-wheel drive)");
+    // LCD call removed to prevent rendering conflicts
 }
 
 void PTO::setScorerMode() {
@@ -38,7 +38,7 @@ void PTO::setScorerMode() {
     current_state = PTO_RETRACTED;
     
     // Debug output
-    pros::lcd::print(0, "PTO Mode: Scorer (2-wheel drive)");
+    // LCD call removed to prevent rendering conflicts
 }
 
 void PTO::toggle() {

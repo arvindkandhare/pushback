@@ -53,10 +53,10 @@ void Drivetrain::update(pros::Controller& controller) {
     tankDrive(left_stick, right_stick);
     
     // Display drive mode on LCD
-    pros::lcd::print(1, "Drive Mode: %s", getCurrentDriveModeString());
+    // LCD call removed to prevent rendering conflicts
     
     // Display motor powers for debugging
-    pros::lcd::print(2, "L: %d  R: %d", left_stick, right_stick);
+    // LCD call removed to prevent rendering conflicts
 }
 
 void Drivetrain::stop() {

@@ -2,8 +2,9 @@
  * \file config.h
  *
  * Hardware configuration definitions for the pushback robot.
- * This file contains all motor ports, pneumatic ports, and controller mappings.
- */
+ * This file contains all motor ports// Indexer motor directions for scoring modes
+ */ 
+
 
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
@@ -58,7 +59,7 @@ gyro 13
 // Step 1: Mode selection buttons (Y/A/B/X)
 #define COLLECTION_MODE_BUTTON     pros::E_CONTROLLER_DIGITAL_Y   // Collection/intake mode
 #define MID_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_A   // Mid level scoring
-#define IMMEDIATE_SCORING_BUTTON   pros::E_CONTROLLER_DIGITAL_B   // Immediate scoring from intake
+#define LOW_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_B   // Low goal scoring (intake reverse)
 #define TOP_GOAL_BUTTON           pros::E_CONTROLLER_DIGITAL_X   // Top level scoring
 
 // Step 2: Execution buttons (R1/R2)
@@ -91,8 +92,8 @@ gyro 13
 // =============================================================================
 
 // PTO pneumatic states
-#define PTO_EXTENDED    true   // Extended = drivetrain mode (3-wheel drive)
-#define PTO_RETRACTED   false  // Retracted = scorer mode (2-wheel drive, middle wheels for scorer)
+#define PTO_EXTENDED    false   // Extended = drivetrain mode (3-wheel drive)
+#define PTO_RETRACTED   true  // Retracted = scorer mode (2-wheel drive, middle wheels for scorer)
 
 // Front flap pneumatic states
 #define FRONT_FLAP_OPEN   true   // Open = balls can score through front
@@ -125,15 +126,29 @@ gyro 13
 #define INDEXER_SPEED_TOP_SCORING    150   // Speed for top scoring (long goal)
 #define INDEXER_SPEED_BOTTOM_SCORING 100   // Speed for bottom scoring (mid goal)
 #define INPUT_MOTOR_SPEED            120   // Speed for ball intake
+#define INPUT_MOTOR_REVERSE_SPEED   -120   // Reverse speed for low goal scoring
 
-// Indexer motor directions for scoring modes
-#define FRONT_INDEXER_TOP_DIRECTION     1   // Positive for top scoring
-#define FRONT_INDEXER_BOTTOM_DIRECTION -1   // Negative for bottom scoring
-#define BACK_INDEXER_TOP_DIRECTION      1   // Positive for top scoring  
-#define BACK_INDEXER_BOTTOM_DIRECTION  -1   // Negative for bottom scoring
+// Direct indexer motor speeds for each mode (positive/negative for direction control)
+// Front scoring speeds
+#define LEFT_INDEXER_FRONT_COLLECTION_SPEED   -100   // Front collection mode
+#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED     100   // Front mid goal (opposite direction)
+#define LEFT_INDEXER_FRONT_IMMEDIATE_SPEED     -120   // Front immediate mode
+#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED      -150   // Front top goal mode
 
-// Scoring sequence timing (milliseconds)
-#define SCORING_SEQUENCE_DURATION    2000   // How long to run indexers when scoring
-#define INPUT_MOTOR_TIMEOUT          5000   // Max time input motor can run continuously
+// Back scoring speeds (when left indexer helps back scoring)
+#define LEFT_INDEXER_BACK_COLLECTION_SPEED     120   // Back collection helper
+#define LEFT_INDEXER_BACK_MID_GOAL_SPEED      -100   // Back mid goal helper
+#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED      120   // Back immediate helper
+#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED       -100   // Back top goal helper
+
+// Right indexer speeds (back scoring main motor)
+#define RIGHT_INDEXER_COLLECTION_SPEED         -120   // Back collection mode
+#define RIGHT_INDEXER_MID_GOAL_SPEED          100   // Back mid goal mode
+#define RIGHT_INDEXER_IMMEDIATE_SPEED          -120   // Back immediate mode
+#define RIGHT_INDEXER_TOP_GOAL_SPEED          -150   // Back top goal mode
+
+// Top indexer speeds
+#define TOP_INDEXER_FRONT_SPEED               150   // Top indexer when scoring front
+#define TOP_INDEXER_BACK_SPEED                -150   // Top indexer when scoring back (opposite)
 
 #endif // _CONFIG_H_

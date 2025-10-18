@@ -27,17 +27,16 @@
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	
-	// Try to get LCD working
+	// Initialize LCD once and set basic startup message
 	pros::lcd::initialize();
-	pros::lcd::set_text(0, "INITIALIZE WORKS!");
-	pros::lcd::set_text(1, "Line 2 test");
+	pros::lcd::set_text(0, "Pushback Robot");
+	pros::lcd::set_text(1, "Initializing...");
 	
-	// Wait and then start opcontrol immediately
-	printf("Starting opcontrol in 1 second...\n");
-	pros::delay(10000);
+	// Brief delay for initialization
+	printf("Robot initializing...\n");
+	pros::delay(1000);
 	
-	printf("=== CALLING OPCONTROL ===\n");
+	printf("=== INITIALIZATION COMPLETE ===\n");
 }
 
 
@@ -49,11 +48,8 @@ void initialize() {
  * the robot is enabled, this task will exit.
  */
 void disabled() {
-	
-	
-	// Display disabled status
-	pros::lcd::print(0, "Robot DISABLED");
-	pros::lcd::print(1, "Waiting for enable...");
+	// Simple console message, avoid LCD conflicts
+	printf("Robot DISABLED - waiting for enable...\n");
 }
 
 /**
@@ -69,9 +65,10 @@ void competition_initialize() {
 	// Competition-specific initialization can go here
 	// For example: autonomous routine selector, alliance color selection, etc.
 	
-	pros::lcd::print(0, "Competition Mode");
-	pros::lcd::print(1, "Pushback Robot Ready");
-	pros::lcd::print(2, "Waiting for match start...");
+	printf("Competition Mode - Pushback Robot Ready\n");
+	// Only update LCD if not in use by other functions
+	pros::lcd::set_text(0, "Competition Mode");
+	pros::lcd::set_text(1, "Robot Ready");
 }
 
 /**
@@ -89,9 +86,9 @@ void autonomous() {
 	// TODO: Implement autonomous routines
 	// This is a placeholder for future autonomous development
 	
-	pros::lcd::print(0, "Autonomous Mode");
-	pros::lcd::print(1, "No autonomous routine");
-	pros::lcd::print(2, "Implement later...");
+	printf("Autonomous Mode - No routine implemented\n");
+	pros::lcd::set_text(0, "Autonomous Mode");
+	pros::lcd::set_text(1, "No routine");
 	
 	// Example autonomous actions (commented out):
 	// 1. Drive forward for 2 seconds
@@ -120,36 +117,41 @@ void autonomous() {
  */
 void opcontrol() {
 	printf("=== OPCONTROL STARTED ===\n");
-	printf("=== OPCONTROL STARTED ===\n");
-	printf("=== OPCONTROL STARTED ===\n");
-// Global robot subsystems
-pros::Controller master(pros::E_CONTROLLER_MASTER);
-PTO pto_system;
-Drivetrain drivetrain(&pto_system);
-IndexerSystem indexer_system(&pto_system);
 	
-	pros::lcd::print(0, "OPCONTROL ACTIVE!");
+	// Global robot subsystems
+	pros::Controller master(pros::E_CONTROLLER_MASTER);
+	PTO pto_system;
+	Drivetrain drivetrain(&pto_system);
+	IndexerSystem indexer_system(&pto_system);
+	
+	// Initialize LCD for opcontrol mode
+	pros::lcd::set_text(0, "OPCONTROL ACTIVE");
+	pros::lcd::set_text(1, "Tank Drive Ready");
 	
 	static int counter = 0;
+	static int lcd_update_counter = 0;
 	
-	// Simplified main loop
+	// Main control loop
 	while (true) {
 		counter++;
+		lcd_update_counter++;
 		
-		// Print every second (50Hz * 50 = 1 second)
+		// Print debug info every second (50Hz * 50 = 1 second)
 		if (counter % 50 == 0) {
 			printf("OPCONTROL LOOP: %d seconds\n", counter / 50);
-			pros::lcd::print(1, "Loop: %d", counter / 50);
 		}
 		
-		// Test controller connection
-		if (master.is_connected()) {
-			if (counter % 100 == 0) {  // Every 2 seconds
-				printf("Controller is connected\n");
+		// Update LCD less frequently to avoid conflicts (every 2 seconds)
+		if (lcd_update_counter >= 100) {
+			lcd_update_counter = 0;
+			
+			// Check controller connection and update LCD
+			if (master.is_connected()) {
 				master.print(0, 0, "Connected: %d", counter / 50);
+			} else {
+				pros::lcd::set_text(1, "Controller DISCONNECTED");
+				printf("Controller DISCONNECTED!\n");
 			}
-		} else {
-			printf("Controller DISCONNECTED!\n");
 		}
 		
 		// Update all subsystems - this is where button mappings are handled

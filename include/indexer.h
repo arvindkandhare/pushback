@@ -18,7 +18,7 @@
 enum class ScoringMode {
     COLLECTION,     ///< Collection/intake mode - run for ball collection only
     MID_GOAL,       ///< Mid level scoring 
-    IMMEDIATE,      ///< Immediate scoring from intake position
+    LOW_GOAL,       ///< Low goal scoring - only intake motor in reverse
     TOP_GOAL,       ///< Top level scoring
     NONE            ///< No mode selected
 };
@@ -67,7 +67,7 @@ private:
     // Button state tracking (for edge detection)
     bool last_collection_button;
     bool last_mid_goal_button;
-    bool last_immediate_button;
+    bool last_low_goal_button;
     bool last_top_goal_button;
     bool last_front_execute_button;
     bool last_back_execute_button;
@@ -90,9 +90,9 @@ public:
     void setMidGoalMode();
 
     /**
-     * Set scoring mode to immediate scoring from intake
+     * Set scoring mode to low goal scoring (intake reverse only)
      */
-    void setImmediateMode();
+    void setLowGoalMode();
 
     /**
      * Set scoring mode to top goal scoring
@@ -123,6 +123,11 @@ public:
      * Start input motor for ball intake
      */
     void startInput();
+
+    /**
+     * Start input motor in reverse for low goal scoring
+     */
+    void startInputReverse();
 
     /**
      * Stop input motor
@@ -167,7 +172,7 @@ public:
 
     /**
      * Get string representation of current mode for debugging
-     * @return "Collection", "Mid Goal", "Immediate", "Top Goal", or "None"
+     * @return "Collection", "Mid Goal", "Low Goal", "Top Goal", or "None"
      */
     const char* getModeString() const;
 
@@ -223,18 +228,6 @@ private:
      * Stop top indexer motor
      */
     void stopTopIndexer();
-
-    /**
-     * Check if scoring sequence has timed out
-     * @return True if scoring should stop due to timeout
-     */
-    bool checkScoringTimeout();
-
-    /**
-     * Check if input motor has timed out
-     * @return True if input motor should stop due to timeout
-     */
-    bool checkInputTimeout();
 };
 
 #endif // _INDEXER_H_

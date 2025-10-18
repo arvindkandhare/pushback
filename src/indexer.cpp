@@ -20,7 +20,7 @@ IndexerSystem::IndexerSystem(PTO* pto)
       input_motor_active(false),
       last_collection_button(false),
       last_mid_goal_button(false),
-      last_immediate_button(false),
+      last_low_goal_button(false),
       last_top_goal_button(false),
       last_front_execute_button(false),
       last_back_execute_button(false) {
@@ -36,8 +36,7 @@ IndexerSystem::IndexerSystem(PTO* pto)
 void IndexerSystem::setCollectionMode() {
     current_mode = ScoringMode::COLLECTION;
     
-    // Debug output to multiple places
-    pros::lcd::print(1, "Mode: COLLECTION");
+    // Debug output to console only
     printf("DEBUG: Set COLLECTION mode\n");
     
     // Send to controller if available
@@ -50,8 +49,7 @@ void IndexerSystem::setCollectionMode() {
 void IndexerSystem::setMidGoalMode() {
     current_mode = ScoringMode::MID_GOAL;
     
-    // Debug output
-    pros::lcd::print(1, "Mode: MID GOAL");
+    // Debug output to console only
     printf("DEBUG: Set MID GOAL mode\n");
     
     // Send to controller
@@ -61,17 +59,17 @@ void IndexerSystem::setMidGoalMode() {
     }
 }
 
-void IndexerSystem::setImmediateMode() {
-    current_mode = ScoringMode::IMMEDIATE;
+void IndexerSystem::setLowGoalMode() {
+    current_mode = ScoringMode::LOW_GOAL;
     
     // Debug output
-    pros::lcd::print(1, "Mode: IMMEDIATE");
-    printf("DEBUG: Set IMMEDIATE mode\n");
+    // LCD call removed to prevent rendering conflicts
+    printf("DEBUG: Set LOW GOAL mode\n");
     
     // Send to controller
     pros::Controller master(pros::E_CONTROLLER_MASTER);
     if (master.is_connected()) {
-        master.print(0, 0, "IMMEDIATE");
+        master.print(0, 0, "LOW GOAL");
     }
 }
 
@@ -79,7 +77,7 @@ void IndexerSystem::setTopGoalMode() {
     current_mode = ScoringMode::TOP_GOAL;
     
     // Debug output
-    pros::lcd::print(1, "Mode: TOP GOAL");
+    // LCD call removed to prevent rendering conflicts
     printf("DEBUG: Set TOP GOAL mode\n");
     
     // Send to controller
@@ -95,7 +93,7 @@ void IndexerSystem::executeFront() {
     // Can't execute without mode selected
     if (current_mode == ScoringMode::NONE) {
         printf("DEBUG: No mode selected\n");
-        pros::lcd::print(2, "Select mode first!");
+        // LCD call removed to prevent rendering conflicts
         pros::Controller master(pros::E_CONTROLLER_MASTER);
         if (master.is_connected()) {
             master.print(1, 0, "Need Mode");
@@ -112,49 +110,55 @@ void IndexerSystem::executeFront() {
     // Set last direction for tracking
     last_direction = ExecutionDirection::FRONT;
     
-    // IMPORTANT: Open front flap for scoring
-    openFrontFlap();
-    pros::delay(100); // Give pneumatics time to actuate
-    
-    // Ensure PTO is in scorer mode for front indexer (left middle motor)
-    if (pto_system && pto_system->isDrivetrainMode()) {
-        pto_system->setScorerMode();
-        pros::delay(100); // Give pneumatics time to actuate
+    // For low goal mode, we don't need pneumatics, so skip delays
+    if (current_mode == ScoringMode::TOP_GOAL) {
+        // IMPORTANT: Open front flap for scoring
+        openFrontFlap();
+        // Reduced delay to minimize blocking
+        pros::delay(50); // Give pneumatics time to actuate
+    } else {
+        // Ensure front flap is closed for other modes
+        closeFrontFlap();
+    }
+    if (current_mode != ScoringMode::LOW_GOAL) {
+        // Ensure PTO is in scorer mode for front indexer (left middle motor)
+        if (pto_system && pto_system->isDrivetrainMode()) {
+            pto_system->setScorerMode();
+            pros::delay(50); // Give pneumatics time to actuate
+        }
     }
     
     // Execute based on mode
-    int motor_speed;
-    
     switch (current_mode) {
         case ScoringMode::COLLECTION:
-            motor_speed = INPUT_MOTOR_SPEED; // 120 RPM
-            printf("DEBUG: FRONT Collection - Left middle motor: %d\n", motor_speed);
-            runLeftIndexer(motor_speed); // Use left middle motor for front collection/storage
+            printf("DEBUG: FRONT Collection - Left middle motor: %d\n", LEFT_INDEXER_FRONT_COLLECTION_SPEED);
+            runLeftIndexer(LEFT_INDEXER_FRONT_COLLECTION_SPEED); // Direct speed for front collection
+            runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Direct speed for back collection
+            runTopIndexer(TOP_INDEXER_FRONT_SPEED);  // Direct speed for top indexer front
             startInput(); // Start intake motor for collection
-            pros::lcd::print(2, "FRONT Collection + Intake...");
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::MID_GOAL:
-            motor_speed = INDEXER_SPEED_BOTTOM_SCORING; // 100 RPM
-            printf("DEBUG: FRONT Mid Goal - Left middle motor: %d\n", motor_speed);
-            runLeftIndexer(motor_speed); // Use left middle motor for front mid scoring
-            pros::lcd::print(2, "FRONT Mid Goal active...");
+            printf("DEBUG: FRONT Mid Goal - Left middle motor: %d\n", LEFT_INDEXER_FRONT_MID_GOAL_SPEED);
+            runLeftIndexer(LEFT_INDEXER_FRONT_MID_GOAL_SPEED); // Direct speed for front mid goal
+            startInput(); // Input motor runs in all scoring modes
+            // LCD call removed to prevent rendering conflicts
             break;
             
-        case ScoringMode::IMMEDIATE:
-            motor_speed = INPUT_MOTOR_SPEED; // 120 RPM - immediate from intake
-            printf("DEBUG: FRONT Immediate - Left middle motor: %d\n", motor_speed);
-            runLeftIndexer(motor_speed); // Use left middle motor for front immediate
-            startInput(); // Start intake motor for immediate scoring
-            pros::lcd::print(2, "FRONT Immediate + Intake...");
+        case ScoringMode::LOW_GOAL:
+            printf("DEBUG: FRONT Low Goal - Only intake motor reverse: %d\n", INPUT_MOTOR_REVERSE_SPEED);
+            startInputReverse(); // Only run intake motor in reverse for low goal
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::TOP_GOAL:
-            motor_speed = INDEXER_SPEED_TOP_SCORING; // 150 RPM
-            printf("DEBUG: FRONT Top Goal - Left middle + top indexer: %d\n", motor_speed);
-            runLeftIndexer(motor_speed); // Use left middle motor
-            runTopIndexer(motor_speed);  // Also use top indexer for top scoring
-            pros::lcd::print(2, "FRONT Top Goal active...");
+            printf("DEBUG: FRONT Top Goal - Left middle + top indexer: %d, %d\n", LEFT_INDEXER_FRONT_TOP_GOAL_SPEED, TOP_INDEXER_FRONT_SPEED);
+            runLeftIndexer(LEFT_INDEXER_FRONT_TOP_GOAL_SPEED); // Direct speed for front top goal
+            runTopIndexer(TOP_INDEXER_FRONT_SPEED);  // Direct speed for top indexer front
+            runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Direct speed for back collection
+            startInput(); // Input motor runs in all scoring modes
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::NONE:
@@ -179,7 +183,7 @@ void IndexerSystem::executeBack() {
     // Can't execute without mode selected
     if (current_mode == ScoringMode::NONE) {
         printf("DEBUG: No mode selected\n");
-        pros::lcd::print(2, "Select mode first!");
+        // LCD call removed to prevent rendering conflicts
         pros::Controller master(pros::E_CONTROLLER_MASTER);
         if (master.is_connected()) {
             master.print(1, 0, "Need Mode");
@@ -196,45 +200,46 @@ void IndexerSystem::executeBack() {
     // Set last direction for tracking
     last_direction = ExecutionDirection::BACK;
     
-    // Ensure PTO is in scorer mode for back indexer
-    if (pto_system && pto_system->isDrivetrainMode()) {
-        pto_system->setScorerMode();
-        pros::delay(100); // Give pneumatics time to actuate
+    // For low goal mode, we don't need PTO, so skip delays
+    if (current_mode != ScoringMode::LOW_GOAL) {
+        // Ensure PTO is in scorer mode for back indexer
+        if (pto_system && pto_system->isDrivetrainMode()) {
+            pto_system->setScorerMode();
+            pros::delay(50); // Reduced delay to minimize blocking
+        }
     }
     
     // Execute based on mode
-    int motor_speed;
-    
     switch (current_mode) {
         case ScoringMode::COLLECTION:
-            motor_speed = INPUT_MOTOR_SPEED; // 120 RPM
-            printf("DEBUG: BACK Collection - Right middle motor: %d\n", motor_speed);
-            runRightIndexer(motor_speed); // Use right middle motor (no storage, just movement)
+            printf("DEBUG: BACK Collection - Right: %d, Left helper: %d\n", RIGHT_INDEXER_COLLECTION_SPEED, LEFT_INDEXER_BACK_COLLECTION_SPEED);
+            runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Direct speed for back collection
+            runLeftIndexer(LEFT_INDEXER_BACK_COLLECTION_SPEED); // Left motor helps bring ball upwards
             startInput(); // Start intake motor for collection
-            pros::lcd::print(2, "BACK Collection + Intake...");
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::MID_GOAL:
-            motor_speed = INDEXER_SPEED_BOTTOM_SCORING; // 100 RPM
-            printf("DEBUG: BACK Mid Goal - Right middle motor: %d\n", motor_speed);
-            runRightIndexer(motor_speed); // Use right middle motor for back mid scoring
-            pros::lcd::print(2, "BACK Mid Goal active...");
+            printf("DEBUG: BACK Mid Goal - Right: %d, Left helper: %d\n", RIGHT_INDEXER_MID_GOAL_SPEED, LEFT_INDEXER_BACK_MID_GOAL_SPEED);
+            runRightIndexer(RIGHT_INDEXER_MID_GOAL_SPEED); // Direct speed for back mid goal
+            runLeftIndexer(LEFT_INDEXER_BACK_MID_GOAL_SPEED); // Left motor helps bring ball upwards
+            startInput(); // Input motor runs in all scoring modes
+            // LCD call removed to prevent rendering conflicts
             break;
             
-        case ScoringMode::IMMEDIATE:
-            motor_speed = INPUT_MOTOR_SPEED; // 120 RPM - immediate from intake
-            printf("DEBUG: BACK Immediate - Right middle motor: %d\n", motor_speed);
-            runRightIndexer(motor_speed); // Use right middle motor for back immediate
-            startInput(); // Start intake motor for immediate scoring
-            pros::lcd::print(2, "BACK Immediate + Intake...");
+        case ScoringMode::LOW_GOAL:
+            printf("DEBUG: BACK Low Goal - Only intake motor reverse: %d\n", INPUT_MOTOR_REVERSE_SPEED);
+            startInputReverse(); // Only run intake motor in reverse for low goal
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::TOP_GOAL:
-            motor_speed = INDEXER_SPEED_TOP_SCORING; // 150 RPM
-            printf("DEBUG: BACK Top Goal - Right middle + top indexer: %d\n", motor_speed);
-            runRightIndexer(motor_speed); // Use right middle motor
-            runTopIndexer(motor_speed);   // Also use top indexer for top scoring
-            pros::lcd::print(2, "BACK Top Goal active...");
+            printf("DEBUG: BACK Top Goal - Right: %d, Top: %d, Left helper: %d\n", RIGHT_INDEXER_TOP_GOAL_SPEED, TOP_INDEXER_BACK_SPEED, LEFT_INDEXER_BACK_TOP_GOAL_SPEED);
+            runRightIndexer(RIGHT_INDEXER_TOP_GOAL_SPEED); // Direct speed for back top goal
+            runTopIndexer(TOP_INDEXER_BACK_SPEED); // Direct speed for top indexer back
+            runLeftIndexer(LEFT_INDEXER_BACK_TOP_GOAL_SPEED); // Left motor helps bring ball upwards
+            startInput(); // Input motor runs in all scoring modes
+            // LCD call removed to prevent rendering conflicts
             break;
             
         case ScoringMode::NONE:
@@ -256,13 +261,12 @@ void IndexerSystem::executeBack() {
 void IndexerSystem::openFrontFlap() {
     front_flap.set_value(FRONT_FLAP_OPEN);
     printf("DEBUG: Front flap OPENED for scoring\n");
-    pros::lcd::print(3, "Front flap: OPEN");
 }
 
 void IndexerSystem::closeFrontFlap() {
     front_flap.set_value(FRONT_FLAP_CLOSED);
     printf("DEBUG: Front flap CLOSED to hold balls\n");
-    pros::lcd::print(3, "Front flap: CLOSED");
+    // LCD call removed to prevent rendering conflicts
 }
 
 void IndexerSystem::startInput() {
@@ -272,8 +276,22 @@ void IndexerSystem::startInput() {
         input_motor_active = true;
         input_start_time = pros::millis();
         
-        pros::lcd::print(3, "Input motor: ACTIVE");
+        // LCD call removed to prevent rendering conflicts
         printf("DEBUG: Input motor started successfully\n");
+    } else {
+        printf("DEBUG: Input motor already active\n");
+    }
+}
+
+void IndexerSystem::startInputReverse() {
+    if (!input_motor_active) {
+        printf("DEBUG: Starting input motor in REVERSE at %d RPM\n", INPUT_MOTOR_REVERSE_SPEED);
+        input_motor.move_velocity(INPUT_MOTOR_REVERSE_SPEED);
+        input_motor_active = true;
+        input_start_time = pros::millis();
+        
+        // LCD call removed to prevent rendering conflicts
+        printf("DEBUG: Input motor reverse started successfully\n");
     } else {
         printf("DEBUG: Input motor already active\n");
     }
@@ -284,11 +302,13 @@ void IndexerSystem::stopInput() {
         input_motor.move_velocity(0);
         input_motor_active = false;
         
-        pros::lcd::print(3, "Input motor: STOPPED");
+        // LCD call removed to prevent rendering conflicts
     }
 }
 
 void IndexerSystem::stopAll() {
+    printf("DEBUG: stopAll() called - resetting all motors and state\n");
+    
     // Stop all motors explicitly
     input_motor.move_velocity(0);
     input_motor.move(0);  // Double-stop to ensure it's off
@@ -300,11 +320,14 @@ void IndexerSystem::stopAll() {
     // IMPORTANT: Close front flap when stopping to hold balls
     closeFrontFlap();
     
-    // Reset state
+    // Reset state completely to ensure system doesn't get stuck
     scoring_active = false;
     input_motor_active = false;
+    last_direction = ExecutionDirection::NONE;  // Reset direction to prevent confusion
     
-    pros::lcd::print(2, "All motors STOPPED");
+    // LCD call removed to prevent rendering conflicts
+    printf("DEBUG: All state reset - scoring_active: %d, input_active: %d, direction: %d\n", 
+           scoring_active, input_motor_active, (int)last_direction);
 }
 
 ScoringMode IndexerSystem::getCurrentMode() const {
@@ -338,16 +361,16 @@ void IndexerSystem::update(pros::Controller& controller) {
     // Get current button states for new control scheme
     bool current_collection_button = controller.get_digital(COLLECTION_MODE_BUTTON);     // Y
     bool current_mid_goal_button = controller.get_digital(MID_GOAL_BUTTON);             // A
-    bool current_immediate_button = controller.get_digital(IMMEDIATE_SCORING_BUTTON);   // B
+    bool current_low_goal_button = controller.get_digital(LOW_GOAL_BUTTON);             // B
     bool current_top_goal_button = controller.get_digital(TOP_GOAL_BUTTON);             // X
     bool current_front_execute_button = controller.get_digital(FRONT_EXECUTE_BUTTON);   // R2
     bool current_back_execute_button = controller.get_digital(BACK_EXECUTE_BUTTON);     // R1
     
     // Debug: Print button states when any button is pressed
-    if (current_collection_button || current_mid_goal_button || current_immediate_button || 
+    if (current_collection_button || current_mid_goal_button || current_low_goal_button || 
         current_top_goal_button || current_front_execute_button || current_back_execute_button) {
         printf("DEBUG: Buttons - Y:%d A:%d B:%d X:%d R2:%d R1:%d\n", 
-               current_collection_button, current_mid_goal_button, current_immediate_button,
+               current_collection_button, current_mid_goal_button, current_low_goal_button,
                current_top_goal_button, current_front_execute_button, current_back_execute_button);
     }
     
@@ -370,12 +393,12 @@ void IndexerSystem::update(pros::Controller& controller) {
         }
     }
     
-    if (current_immediate_button && !last_immediate_button) {
-        printf("DEBUG: B (IMMEDIATE) button pressed!\n");
-        setImmediateMode();
+    if (current_low_goal_button && !last_low_goal_button) {
+        printf("DEBUG: B (LOW GOAL) button pressed!\n");
+        setLowGoalMode();
         controller.rumble(".");
         if (controller.is_connected()) {
-            controller.print(2, 0, "B IMMEDIATE");
+            controller.print(2, 0, "B LOW GOAL");
         }
     }
     
@@ -391,6 +414,7 @@ void IndexerSystem::update(pros::Controller& controller) {
     // Handle execution with TOGGLE functionality (rising edge detection)
     if (current_front_execute_button && !last_front_execute_button) {
         printf("DEBUG: R2 (FRONT EXECUTE) button pressed!\n");
+        printf("DEBUG: Current state - scoring_active: %d, last_direction: %d\n", scoring_active, (int)last_direction);
         
         // TOGGLE: If already scoring front, stop it. Otherwise start front execution.
         if (scoring_active && last_direction == ExecutionDirection::FRONT) {
@@ -412,6 +436,7 @@ void IndexerSystem::update(pros::Controller& controller) {
     
     if (current_back_execute_button && !last_back_execute_button) {
         printf("DEBUG: R1 (BACK EXECUTE) button pressed!\n");
+        printf("DEBUG: Current state - scoring_active: %d, last_direction: %d\n", scoring_active, (int)last_direction);
         
         // TOGGLE: If already scoring back, stop it. Otherwise start back execution.
         if (scoring_active && last_direction == ExecutionDirection::BACK) {
@@ -469,21 +494,38 @@ void IndexerSystem::update(pros::Controller& controller) {
     last_left_test_button = current_left_test_button;
     last_right_test_button = current_right_test_button;
     
-    // Check for automatic timeouts
-    if (scoring_active && checkScoringTimeout()) {
-        stopAll();
-        controller.rumble("---");  // Long rumble to indicate timeout
+    // IMPORTANT: Add timeout mechanism for low goal mode to prevent system from getting stuck
+    if (scoring_active && current_mode == ScoringMode::LOW_GOAL) {
+        // Automatic timeout for low goal mode after 3 seconds
+        if (pros::millis() - scoring_start_time > 3000) {
+            printf("DEBUG: Low goal mode timeout - automatically stopping\n");
+            stopAll();
+            // LCD call removed to prevent rendering conflicts
+            
+            // Notify controller
+            if (controller.is_connected()) {
+                controller.print(2, 0, "LOW TIMEOUT");
+                controller.rumble("...");
+            }
+        }
     }
     
-    if (input_motor_active && checkInputTimeout()) {
-        stopInput();
-        controller.rumble("--");   // Medium rumble to indicate input timeout
+    // Emergency stop: If any execution button is held for more than 5 seconds, force stop
+    if (scoring_active && (pros::millis() - scoring_start_time > 5000)) {
+        printf("DEBUG: Emergency timeout - force stopping all operations\n");
+        stopAll();
+        // LCD call removed to prevent rendering conflicts
+        
+        if (controller.is_connected()) {
+            controller.print(2, 0, "EMERGENCY STOP");
+            controller.rumble("---");
+        }
     }
     
     // Update last button states for next iteration
     last_collection_button = current_collection_button;
     last_mid_goal_button = current_mid_goal_button;
-    last_immediate_button = current_immediate_button;
+    last_low_goal_button = current_low_goal_button;
     last_top_goal_button = current_top_goal_button;
     last_front_execute_button = current_front_execute_button;
     last_back_execute_button = current_back_execute_button;
@@ -493,7 +535,7 @@ const char* IndexerSystem::getModeString() const {
     switch (current_mode) {
         case ScoringMode::COLLECTION:  return "COLLECTION";
         case ScoringMode::MID_GOAL:    return "MID GOAL";
-        case ScoringMode::IMMEDIATE:   return "IMMEDIATE";
+        case ScoringMode::LOW_GOAL:    return "LOW GOAL";
         case ScoringMode::TOP_GOAL:    return "TOP GOAL";
         case ScoringMode::NONE:        return "NONE";
         default: return "UNKNOWN";
@@ -513,30 +555,24 @@ void IndexerSystem::runLeftIndexer(int speed) {
     // Left indexer uses the LEFT middle wheel via PTO for front storage/scoring
     printf("DEBUG: runLeftIndexer() called with speed: %d\n", speed);
     
-    // Create motor object for LEFT middle wheel
+    // Create motor object for LEFT middle wheel WITHOUT automatic reversal for direct control
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    if (LEFT_MOTORS_REVERSED) {
-        speed = -speed; // Reverse speed if needed
-    }
     
-    // Run the left middle wheel for front indexer
+    // Run the left middle wheel for front indexer with direct speed control
     left_middle.move_velocity(speed);
-    printf("DEBUG: Left middle motor (front indexer) command sent\n");
+    printf("DEBUG: Left middle motor (front indexer) direct speed: %d\n", speed);
 }
 
 void IndexerSystem::runRightIndexer(int speed) {
     // Right indexer uses the RIGHT middle wheel via PTO for back scoring
     printf("DEBUG: runRightIndexer() called with speed: %d\n", speed);
     
-    // Create motor object for RIGHT middle wheel
+    // Create motor object for RIGHT middle wheel WITHOUT automatic reversal for direct control
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    if (RIGHT_MOTORS_REVERSED) {
-        speed = -speed; // Reverse speed if needed
-    }
     
-    // Run the right middle wheel for back indexer
+    // Run the right middle wheel for back indexer with direct speed control
     right_middle.move_velocity(speed);
-    printf("DEBUG: Right middle motor (back indexer) command sent\n");
+    printf("DEBUG: Right middle motor (back indexer) direct speed: %d\n", speed);
 }
 
 void IndexerSystem::runTopIndexer(int speed) {
@@ -553,20 +589,6 @@ void IndexerSystem::stopTopIndexer() {
     top_indexer.move(0);  // Double-stop to ensure it's off
 }
 
-bool IndexerSystem::checkScoringTimeout() {
-    if (scoring_active) {
-        return (pros::millis() - scoring_start_time) > SCORING_SEQUENCE_DURATION;
-    }
-    return false;
-}
-
-bool IndexerSystem::checkInputTimeout() {
-    if (input_motor_active) {
-        return (pros::millis() - input_start_time) > INPUT_MOTOR_TIMEOUT;
-    }
-    return false;
-}
-
 // Testing functions for individual indexer control
 void IndexerSystem::testLeftIndexer(int speed) {
     // Ensure PTO is in scorer mode to control left middle wheel
@@ -575,17 +597,13 @@ void IndexerSystem::testLeftIndexer(int speed) {
         pros::delay(100); // Give pneumatics time to actuate
     }
     
-    // Create motor object for LEFT middle wheel
+    // Create motor object for LEFT middle wheel WITHOUT automatic reversal for direct control
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    if (LEFT_MOTORS_REVERSED) {
-        speed = -speed; // Reverse speed if needed
-    }
     
-    // Run left middle wheel for testing
-    left_middle.move_velocity(speed);
+    // Run left middle wheel for testing with direct speed control
     left_middle.move_velocity(speed);
     
-    pros::lcd::print(2, "Testing LEFT indexer: %d RPM", speed);
+    // LCD call removed to prevent rendering conflicts
 }
 
 void IndexerSystem::testRightIndexer(int speed) {
@@ -595,32 +613,29 @@ void IndexerSystem::testRightIndexer(int speed) {
         pros::delay(100); // Give pneumatics time to actuate
     }
     
-    // Create motor object for RIGHT middle wheel
+    // Create motor object for RIGHT middle wheel WITHOUT automatic reversal for direct control
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    if (RIGHT_MOTORS_REVERSED) {
-        speed = -speed; // Reverse speed if needed
-    }
     
-    // Run right middle wheel for testing
+    // Run right middle wheel for testing with direct speed control
     right_middle.move_velocity(speed);
     
-    pros::lcd::print(2, "Testing RIGHT indexer: %d RPM", speed);
+    // LCD call removed to prevent rendering conflicts
 }
 
 void IndexerSystem::stopLeftIndexer() {
-    // Stop LEFT middle wheel
+    // Stop LEFT middle wheel with direct motor control
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     left_middle.move_velocity(0);
     left_middle.move(0);  // Double-stop to ensure it's off
     
-    pros::lcd::print(2, "LEFT indexer STOPPED");
+    // LCD call removed to prevent rendering conflicts
 }
 
 void IndexerSystem::stopRightIndexer() {
-    // Stop RIGHT middle wheel
+    // Stop RIGHT middle wheel with direct motor control
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     right_middle.move_velocity(0);
     right_middle.move(0);  // Double-stop to ensure it's off
     
-    pros::lcd::print(2, "RIGHT indexer STOPPED");
+    // LCD call removed to prevent rendering conflicts
 }

@@ -10,7 +10,7 @@ This document provides a complete reference for all controller button mappings a
 - **PTO System**: Pneumatic Power Take-Off for switching middle wheels between drive and scorer modes
 - **Scoring System**: 
   - **Front**: Left middle motor (via PTO) + pneumatic flap + top indexer motor (for top goals)
-  - **Back**: Right middle motor (via PTO) + top indexer motor (for top goals)
+  - **Back**: Right middle motor (via PTO) + top indexer motor (for top goals) - *Both motors reversed for proper direction*
   - **Storage**: Only on front side with pneumatic flap control
 
 ---
