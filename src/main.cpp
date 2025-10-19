@@ -141,19 +141,28 @@ void opcontrol() {
 	static int lcd_update_counter = 0;
 	
 	// Main control loop
+	bool auton_ran = false;
 	while (true) {
 		counter++;
 		lcd_update_counter++;
-		
+
+		// TEMP: Press X to run autonomous ONCE for testing
+		if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X) && !auton_ran) {
+			printf("[TEST] X pressed: Running autonomous routine!\n");
+			pros::lcd::set_text(2, "[TEST] Running Auton");
+			autonomous();
+			auton_ran = true;
+		}
+
 		// Print debug info every second (50Hz * 50 = 1 second)
 		if (counter % 50 == 0) {
 			printf("OPCONTROL LOOP: %d seconds\n", counter / 50);
 		}
-		
+
 		// Update LCD less frequently to avoid conflicts (every 2 seconds)
 		if (lcd_update_counter >= 100) {
 			lcd_update_counter = 0;
-			
+
 			// Check controller connection and update LCD
 			if (master.is_connected()) {
 				master.print(0, 0, "Connected: %d", counter / 50);
@@ -162,13 +171,13 @@ void opcontrol() {
 				printf("Controller DISCONNECTED!\n");
 			}
 		}
-		
+
 		// Update all subsystems - this is where button mappings are handled
 		drivetrain.update(master);
 		pto_system.update(master);
 		indexer_system.update(master);
 		intake_system.update(master);  // Update intake system
-		
+
 		pros::delay(20);  // 50Hz loop
 	}
 }
