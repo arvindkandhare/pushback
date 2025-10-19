@@ -29,10 +29,10 @@
 #define INPUT_MOTOR_PORT        1   // 11W motor at bottom for ball intake
 #define TOP_INDEXER_PORT        8   // Top indexer motor (shared: front top OR back top)
 
-/* vertical odom 9
-horizontal 10
-gyro 13
- */
+// Odometry and navigation sensors
+#define VERTICAL_ENCODER_PORT   9   // Vertical tracking wheel encoder
+#define HORIZONTAL_ENCODER_PORT 10  // Horizontal tracking wheel encoder  
+#define GYRO_PORT              13   // Inertial sensor for heading
 
 // =============================================================================
 // PNEUMATIC PORTS - ADI (Analog/Digital Interface)
@@ -168,5 +168,45 @@ gyro 13
 // Top indexer speeds
 #define TOP_INDEXER_FRONT_SPEED               150   // Top indexer when scoring front
 #define TOP_INDEXER_BACK_SPEED                -150   // Top indexer when scoring back (opposite)
+
+// =============================================================================
+// AUTONOMOUS SYSTEM CONFIGURATION
+// =============================================================================
+
+// Odometry wheel specifications (adjust based on your actual wheels)
+#define TRACKING_WHEEL_DIAMETER  2.75  // Diameter of tracking wheels in inches
+#define TRACKING_WHEEL_CIRCUMFERENCE (TRACKING_WHEEL_DIAMETER * M_PI)
+
+// Robot dimensions (adjust based on your actual robot)
+#define ROBOT_WIDTH             15.0   // Distance between left/right wheels (inches)
+#define ROBOT_LENGTH            15.0   // Robot length (inches)
+
+// Movement control constants
+#define DRIVE_KP                0.8    // Proportional gain for driving
+#define DRIVE_KI                0.01   // Integral gain for driving
+#define DRIVE_KD                0.1    // Derivative gain for driving
+#define TURN_KP                 1.2    // Proportional gain for turning
+#define TURN_KI                 0.02   // Integral gain for turning
+#define TURN_KD                 0.15   // Derivative gain for turning
+
+// Movement thresholds
+#define POSITION_THRESHOLD      2.0    // Acceptable error for position (inches)
+#define HEADING_THRESHOLD       2.0    // Acceptable error for heading (degrees)
+#define DRIVE_MAX_SPEED         127    // Maximum drive speed
+#define TURN_MAX_SPEED          100    // Maximum turn speed
+
+// Autonomous mode enumeration
+enum class AutoMode {
+    DISABLED = 0,
+    RED_LEFT_AWP = 1,
+    RED_LEFT_BONUS = 2,
+    RED_RIGHT_AWP = 3,
+    RED_RIGHT_BONUS = 4,
+    SKILLS = 5,
+    TEST_DRIVE = 6,
+    TEST_TURN = 7,
+    TEST_NAVIGATION = 8,
+    TEST_ODOMETRY = 9
+};
 
 #endif // _CONFIG_H_

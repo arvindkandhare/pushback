@@ -1,0 +1,774 @@
+/**
+ * \file autonomous.cpp
+ *
+ * Autonomous system implementation for VEX Push Back 2024-25.
+ * Implements odometry-based navigation with AWP-focused routines.
+ */
+
+#include "autonomous.h"
+#include "lemlib_config.h"
+#include <utility>
+
+// =============================================================================
+// PID Controller Implementation
+// =============================================================================
+
+PIDController::PIDController(double kp, double ki, double kd) 
+    : kp(kp), ki(ki), kd(kd), previous_error(0), integral(0), last_time(0) {}
+
+double PIDController::calculate(double error) {
+    uint32_t current_time = pros::millis();
+    double dt = (current_time - last_time) / 1000.0; // Convert to seconds
+    
+    if (last_time == 0) dt = 0.02; // Default 20ms for first call
+    
+    // Integral term with windup protection
+    integral += error * dt;
+    if (integral > 50) integral = 50;
+    if (integral < -50) integral = -50;
+    
+    // Derivative term
+    double derivative = (dt > 0) ? (error - previous_error) / dt : 0;
+    
+    // Calculate PID output
+    double output = kp * error + ki * integral + kd * derivative;
+    
+    // Update for next iteration
+    previous_error = error;
+    last_time = current_time;
+    
+    return output;
+}
+
+void PIDController::reset() {
+    previous_error = 0;
+    integral = 0;
+    last_time = 0;
+}
+
+// =============================================================================
+// Auto Selector Implementation
+// =============================================================================
+
+AutoSelector::AutoSelector() 
+    : selected_mode(AutoMode::DISABLED), selector_position(0), mode_confirmed(false) {}
+
+void AutoSelector::displayOptions() {
+    const char* mode_names[] = {
+        "DISABLED",
+        "Red Left AWP",
+        "Red Left Bonus", 
+        "Red Right AWP",
+        "Red Right Bonus",
+        "Skills",
+        "Test: Drive",
+        "Test: Turn",
+        "Test: Navigation",
+        "Test: Odometry"
+    };
+    
+    // Display on both LCD and controller screen
+    pros::lcd::clear();
+    pros::lcd::set_text(0, "=== AUTO SELECT ===");
+    pros::lcd::set_text(1, mode_names[selector_position]);
+    
+    // Also display on controller screen
+    pros::Controller master(pros::E_CONTROLLER_MASTER);
+    if (master.is_connected()) {
+        if (mode_confirmed) {
+            master.print(0, 0, "CONFIRMED: %s", mode_names[selector_position]);
+            master.print(1, 0, "Press A to change");
+            pros::lcd::set_text(2, "CONFIRMED!");
+            pros::lcd::set_text(3, "Press A to change");
+        } else {
+            master.print(0, 0, "Select: %s", mode_names[selector_position]);
+            master.print(1, 0, "UP/DOWN: change, A: confirm");
+            pros::lcd::set_text(2, "Controller: UP/DOWN");
+            pros::lcd::set_text(3, "A: Confirm selection");
+        }
+    }
+}
+
+void AutoSelector::handleInput() {
+    // Use controller instead of LCD buttons
+    pros::Controller master(pros::E_CONTROLLER_MASTER);
+    
+    // Read controller button states
+    bool left_pressed = master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT);
+    bool right_pressed = master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT);
+    bool up_pressed = master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP);
+    bool down_pressed = master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN);
+    bool a_pressed = master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A);
+    
+    if (!mode_confirmed) {
+        // Navigation mode
+        if (left_pressed || down_pressed) {
+            selector_position--;
+            if (selector_position < 0) selector_position = 9;
+            printf("Selected mode: %d\n", selector_position);
+        }
+        
+        if (right_pressed || up_pressed) {
+            selector_position++;
+            if (selector_position > 9) selector_position = 0;
+            printf("Selected mode: %d\n", selector_position);
+        }
+        
+        if (a_pressed) {
+            selected_mode = static_cast<AutoMode>(selector_position);
+            mode_confirmed = true;
+            printf("Autonomous mode CONFIRMED: %d\n", selector_position);
+            
+            // Print mode name for clarity
+            const char* mode_names[] = {
+                "DISABLED", "Red Left AWP", "Red Left Bonus", 
+                "Red Right AWP", "Red Right Bonus", "Skills",
+                "Test: Drive", "Test: Turn", "Test: Navigation", "Test: Odometry"
+            };
+            printf("Mode: %s\n", mode_names[selector_position]);
+        }
+    } else {
+        // Confirmation mode - allow changing selection
+        if (a_pressed) {
+            mode_confirmed = false;
+            printf("Mode deselected - can change again\n");
+        }
+    }
+}
+
+AutoMode AutoSelector::getSelectedMode() {
+    return selected_mode;
+}
+
+bool AutoSelector::isModeConfirmed() {
+    return mode_confirmed;
+}
+
+void AutoSelector::update() {
+    handleInput();
+    displayOptions();
+}
+
+// =============================================================================
+// Autonomous System Implementation  
+// =============================================================================
+
+AutonomousSystem::AutonomousSystem(Drivetrain* dt, PTO* pto, IndexerSystem* indexer)
+    : vertical_encoder(VERTICAL_ENCODER_PORT, false),
+      horizontal_encoder(HORIZONTAL_ENCODER_PORT, false),
+      gyro(GYRO_PORT),
+      drivetrain(dt),
+      pto_system(pto),
+      indexer_system(indexer),
+      current_position(0, 0, 0),
+      target_position(0, 0, 0),
+      drive_pid(DRIVE_KP, DRIVE_KI, DRIVE_KD),
+      turn_pid(TURN_KP, TURN_KI, TURN_KD),
+      odometry_initialized(false),
+      autonomous_running(false),
+      last_update_time(0) {}
+
+void AutonomousSystem::initialize() {
+    printf("Initializing Autonomous System...\n");
+    
+    // Reset encoders
+    vertical_encoder.reset();
+    horizontal_encoder.reset();
+    
+    // Calibrate gyroscope
+    pros::lcd::set_text(0, "Calibrating Gyro...");
+    gyro.reset();
+    
+    // Wait for gyro calibration (up to 3 seconds)
+    int calibration_time = 0;
+    while (gyro.is_calibrating() && calibration_time < 3000) {
+        pros::delay(10);
+        calibration_time += 10;
+    }
+    
+    if (gyro.is_calibrating()) {
+        printf("WARNING: Gyro calibration timeout!\n");
+        pros::lcd::set_text(1, "Gyro timeout!");
+    } else {
+        printf("Gyro calibration complete\n");
+        pros::lcd::set_text(1, "Gyro ready");
+    }
+    
+    // Initialize position
+    setPosition(0, 0, 0);
+    
+    // Reset PID controllers
+    drive_pid.reset();
+    turn_pid.reset();
+    
+    odometry_initialized = true;
+    printf("Autonomous System initialized\n");
+    // Initialize LemLib chassis and odometry
+    initializeLemLib();
+    
+    pros::delay(500);
+    pros::lcd::clear();
+}
+
+void AutonomousSystem::updateOdometry() {
+    if (!odometry_initialized) return;
+    
+    uint32_t current_time = pros::millis();
+    if (last_update_time == 0) {
+        last_update_time = current_time;
+        return;
+    }
+    
+    double dt = (current_time - last_update_time) / 1000.0;
+    last_update_time = current_time;
+    
+    // Read encoder values
+    double vertical_ticks = vertical_encoder.get_value();
+    double horizontal_ticks = horizontal_encoder.get_value();
+    
+    // Convert to distance (adjust based on your encoder setup)
+    double vertical_distance = (vertical_ticks * TRACKING_WHEEL_CIRCUMFERENCE) / 360.0;
+    double horizontal_distance = (horizontal_ticks * TRACKING_WHEEL_CIRCUMFERENCE) / 360.0;
+    
+    // Get gyro heading
+    double heading_rad = gyro.get_heading() * M_PI / 180.0;
+    
+    // Reset encoders for next iteration
+    vertical_encoder.reset();
+    horizontal_encoder.reset();
+    
+    // Update position using odometry equations
+    double cos_h = cos(heading_rad);
+    double sin_h = sin(heading_rad);
+    
+    current_position.x += vertical_distance * cos_h - horizontal_distance * sin_h;
+    current_position.y += vertical_distance * sin_h + horizontal_distance * cos_h;
+    current_position.heading = gyro.get_heading();
+}
+
+void AutonomousSystem::update() {
+    updateOdometry();
+    auto_selector.update();
+}
+
+void AutonomousSystem::setPosition(double x, double y, double heading) {
+    current_position.x = x;
+    current_position.y = y;
+    current_position.heading = heading;
+    
+    // Reset gyro to match heading
+    gyro.set_heading(heading);
+    
+    printf("Position set to: (%.2f, %.2f, %.2f°)\n", x, y, heading);
+}
+
+Position AutonomousSystem::getPosition() {
+    return current_position;
+}
+
+double AutonomousSystem::normalizeAngle(double angle) {
+    while (angle > 180) angle -= 360;
+    while (angle < -180) angle += 360;
+    return angle;
+}
+
+double AutonomousSystem::getDistanceToTarget() {
+    double dx = target_position.x - current_position.x;
+    double dy = target_position.y - current_position.y;
+    return sqrt(dx * dx + dy * dy);
+}
+
+double AutonomousSystem::getAngleToTarget() {
+    double dx = target_position.x - current_position.x;
+    double dy = target_position.y - current_position.y;
+    return atan2(dy, dx) * 180.0 / M_PI;
+}
+
+double AutonomousSystem::getHeadingError(double target_heading) {
+    return normalizeAngle(target_heading - current_position.heading);
+}
+
+void AutonomousSystem::driveToPoint(double x, double y, double max_speed, double timeout_ms) {
+    target_position.x = x;
+    target_position.y = y;
+    
+    // Use LemLib chassis to move to the point
+    printf("Driving to point (LemLib): (%.2f, %.2f)\n", x, y);
+    chassis.moveToPoint(x, y, timeout_ms);
+    chassis.waitUntilDone();
+    printf("Drive to point (LemLib) complete\n");
+}
+
+void AutonomousSystem::turnToHeading(double heading, double max_speed, double timeout_ms) {
+    // Use LemLib to perform heading turn
+    printf("Turning to heading (LemLib): %.2f°\n", heading);
+    chassis.turnToHeading(heading, timeout_ms);
+    chassis.waitUntilDone();
+    printf("Turn to heading (LemLib) complete\n");
+}
+
+void AutonomousSystem::driveDistance(double distance, double heading, double max_speed, double timeout_ms) {
+    // If no heading specified, maintain current heading
+    if (heading == -999) {
+        heading = current_position.heading;
+    }
+    
+    // Calculate target position
+    double target_x = current_position.x + distance * cos(heading * M_PI / 180.0);
+    double target_y = current_position.y + distance * sin(heading * M_PI / 180.0);
+    
+    driveToPoint(target_x, target_y, max_speed, timeout_ms);
+}
+
+AutoSelector& AutonomousSystem::getSelector() {
+    return auto_selector;
+}
+
+void AutonomousSystem::stopAllMovement() {
+    drivetrain->stop();
+    autonomous_running = false;
+}
+
+bool AutonomousSystem::isMovementComplete() {
+    double distance_error = getDistanceToTarget();
+    double heading_error = getHeadingError(target_position.heading);
+    
+    return (distance_error < POSITION_THRESHOLD && fabs(heading_error) < HEADING_THRESHOLD);
+}
+
+void AutonomousSystem::printPosition() {
+    printf("Robot Position: (%.2f, %.2f, %.2f°)\n", 
+           current_position.x, current_position.y, current_position.heading);
+}
+
+// =============================================================================
+// Autonomous Route Implementations (Placeholders - to be developed)
+// =============================================================================
+
+void AutonomousSystem::executeRedLeftAWP() {
+    printf("Executing Red Right AWP Route (ported)\n");
+    autonomous_running = true;
+
+    // Use LemLib chassis and calibrated movement from working_code.txt
+    // Set starting pose (matches working code)
+    chassis.setPose(0, 0, 60);
+
+    double offset = 0; // cumulative correction (unused but preserved)
+
+    // Helper lambdas ported from working code
+    auto getForwardTarget = [&](double distance) {
+        double x = chassis.getPose().x;
+        double y = chassis.getPose().y;
+        double theta = chassis.getPose().theta * M_PI / 180.0; // radians
+        double targetX = x + distance * sin(theta);
+        double targetY = y + distance * cos(theta);
+        return std::make_pair(targetX, targetY);
+    };
+
+    auto moveWithTolerance = [&](double x, double y, double theta, bool forwards, float maxSpeed, double tolerance) {
+        double targetDistance = sqrt(x * x + y * y);
+        double correctedY = y - offset;
+
+    lemlib::MoveToPoseParams moveParams;
+    moveParams.forwards = forwards;
+    moveParams.maxSpeed = static_cast<float>(maxSpeed);
+    chassis.moveToPose(x, correctedY, theta, 5000000, moveParams);
+
+        int stagnantCount = 0;
+        double lastError = std::numeric_limits<double>::max();
+        double tolerancePos = 5;
+        while (true) {
+            auto pose = chassis.getPose();
+            double errorX = x - pose.x;
+            double errorY = correctedY - pose.y;
+            double distanceError = sqrt(errorX * errorX + errorY * errorY);
+
+            if (fabs(distanceError - lastError) < 0.05) {
+                stagnantCount++;
+            } else {
+                stagnantCount = 0;
+            }
+            lastError = distanceError;
+
+            if (stagnantCount > 3 && distanceError <= tolerancePos) {
+                drivetrain->stop();
+                chassis.cancelMotion();
+                break;
+            }
+            pros::delay(5);
+        }
+    };
+
+    auto turnWithTolerance = [&](double targetTheta, float maxSpeed, double toleranceDeg) {
+        // Use the main chassis for turning; set params for maxSpeed
+        lemlib::TurnToHeadingParams turnParams;
+        turnParams.maxSpeed = static_cast<int>(maxSpeed);
+        chassis.turnToHeading(targetTheta, 3000, turnParams);
+
+        int stagnantCount = 0;
+        double lastError = std::numeric_limits<double>::max();
+
+        while (true) {
+            auto pose = chassis.getPose();
+            double errorTheta = targetTheta - pose.theta;
+            while (errorTheta > 180) errorTheta -= 360;
+            while (errorTheta < -180) errorTheta += 360;
+
+            if (fabs(errorTheta - lastError) < 0.05) {
+                stagnantCount++;
+            } else {
+                stagnantCount = 0;
+            }
+            lastError = errorTheta;
+
+            if (stagnantCount > 3 && fabs(errorTheta) <= toleranceDeg) {
+                drivetrain->stop();
+                chassis.cancelMotion();
+                break;
+            }
+            pros::delay(5);
+        }
+    };
+
+    // --- Auto Movements (ported) ---
+
+    // START INTAKE (match comment: ADD INTAKING HERE)
+    indexer_system->startInput();
+
+    // Move forward ~35.5"
+    auto [targetX, targetY] = getForwardTarget(35.5);
+    moveWithTolerance(targetX, targetY, 60, true, 60, 0.5);
+    pros::delay(100);
+    turnWithTolerance(180, 80, 2.5);
+    pros::delay(100);
+
+    // Back up ~12"
+    std::tie(targetX, targetY) = getForwardTarget(-12);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 40, 0.5);
+
+    // BACKSCORING MIDDLE - execute indexer back scoring sequence
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(700); // brief pause for scoring
+    indexer_system->stopAll();
+
+    pros::delay(50);
+    std::tie(targetX, targetY) = getForwardTarget(27);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    turnWithTolerance(160, 100, 2.0);
+    pros::delay(50);
+    std::tie(targetX, targetY) = getForwardTarget(22);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    pros::delay(50);
+    turnWithTolerance(225, 80, 2.5);
+    std::tie(targetX, targetY) = getForwardTarget(23.5);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+
+    pros::delay(1000);
+    // START INTAKE FROM MATCH LOAD
+    indexer_system->startInput();
+
+    turnWithTolerance(231, 140, 2.5);
+    std::tie(targetX, targetY) = getForwardTarget(-35);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 100, 0.5);
+    pros::delay(50);
+
+    // TOP BACKSCORING - use back/top indexer
+    indexer_system->setTopGoalMode();
+    indexer_system->executeBack();
+    pros::delay(1200);
+    indexer_system->stopAll();
+
+    chassis.waitUntil(10);
+    chassis.waitUntilDone();
+
+    pros::lcd::print(4, "autonomous finished!");
+
+    autonomous_running = false;
+    printf("Red Right AWP Route Complete\n");
+}
+
+void AutonomousSystem::executeRedLeftBonus() {
+    printf("Executing Red Left Bonus Route\n");
+    // TODO: Implement aggressive bonus route
+    executeRedLeftAWP(); // Fallback to AWP route for now
+}
+
+void AutonomousSystem::executeRedRightAWP() {
+    printf("Executing Red Right AWP Route\n");
+    // TODO: Implement Red Right AWP route (mirror of Red Left)
+    executeRedLeftAWP(); // Placeholder
+}
+
+void AutonomousSystem::executeRedRightBonus() {
+    printf("Executing Red Right Bonus Route\n");
+    // TODO: Implement Red Right bonus route
+    executeRedRightAWP(); // Fallback to AWP route for now
+}
+
+void AutonomousSystem::executeSkillsRoutine() {
+    printf("Executing Skills Routine\n");
+    // TODO: Implement programming skills routine
+    autonomous_running = true;
+    
+    // Skills routine can be longer and more complex
+    printf("Skills routine placeholder\n");
+    pros::delay(5000);
+    
+    autonomous_running = false;
+    printf("Skills Routine Complete\n");
+}
+
+void AutonomousSystem::runAutonomous() {
+    if (!odometry_initialized) {
+        printf("ERROR: Autonomous system not initialized!\n");
+        return;
+    }
+    
+    AutoMode mode = auto_selector.getSelectedMode();
+    printf("Running autonomous mode: %d\n", static_cast<int>(mode));
+    
+    switch (mode) {
+        case AutoMode::RED_LEFT_AWP:
+            executeRedLeftAWP();
+            break;
+            
+        case AutoMode::RED_LEFT_BONUS:
+            executeRedLeftBonus();
+            break;
+            
+        case AutoMode::RED_RIGHT_AWP:
+            executeRedRightAWP();
+            break;
+            
+        case AutoMode::RED_RIGHT_BONUS:
+            executeRedRightBonus();
+            break;
+            
+        case AutoMode::SKILLS:
+            executeSkillsRoutine();
+            break;
+            
+        case AutoMode::TEST_DRIVE:
+            printf("🚗 TEST: Drive 24 inches forward\n");
+            printf("Current PID gains: P=%.2f, I=%.3f, D=%.2f\n", DRIVE_KP, DRIVE_KI, DRIVE_KD);
+            testStraightDrive(24.0);  // Test 24" drive
+            break;
+            
+        case AutoMode::TEST_TURN:
+            printf("🔄 TEST: Turn 90 degrees\n");
+            printf("Current PID gains: P=%.2f, I=%.3f, D=%.2f\n", TURN_KP, TURN_KI, TURN_KD);
+            testTurnAccuracy(90.0);   // Test 90° turn
+            break;
+            
+        case AutoMode::TEST_NAVIGATION:
+            testPointToPoint();       // Test navigation accuracy
+            break;
+            
+        case AutoMode::TEST_ODOMETRY:
+            testOdometryAccuracy();   // Test odometry with manual verification
+            break;
+            
+        case AutoMode::DISABLED:
+        default:
+            printf("Autonomous disabled or invalid mode\n");
+            break;
+    }
+}
+
+// =============================================================================
+// Testing and Calibration Functions
+// =============================================================================
+
+void AutonomousSystem::testStraightDrive(double distance) {
+    printf("=== STRAIGHT DRIVE TEST ===\n");
+    printf("Target distance: %.2f inches\n", distance);
+    
+    // Record starting position
+    Position start_pos = current_position;
+    printf("Starting position: (%.2f, %.2f, %.2f°)\n", 
+           start_pos.x, start_pos.y, start_pos.heading);
+    
+    // Reset position for clean test
+    setPosition(0, 0, 0);
+    
+    // Drive straight
+    uint32_t start_time = pros::millis();
+    driveDistance(distance, 0);  // Drive forward, maintain 0° heading
+    uint32_t end_time = pros::millis();
+    
+    // Check results
+    Position final_pos = current_position;
+    double actual_distance = sqrt(final_pos.x * final_pos.x + final_pos.y * final_pos.y);
+    double distance_error = actual_distance - distance;
+    double heading_error = final_pos.heading;
+    
+    printf("=== RESULTS ===\n");
+    printf("Target: %.2f inches\n", distance);
+    printf("Actual: %.2f inches\n", actual_distance);
+    printf("Error: %.2f inches (%.1f%%)\n", distance_error, (distance_error/distance)*100);
+    printf("Heading drift: %.2f degrees\n", heading_error);
+    printf("Time taken: %d ms\n", end_time - start_time);
+    
+    if (fabs(distance_error) < 1.0 && fabs(heading_error) < 3.0) {
+        printf("✅ PASS: Drive accuracy acceptable\n");
+        printf("   PID tuning looks good!\n");
+    } else {
+        printf("❌ FAIL: Needs calibration\n");
+        if (fabs(distance_error) >= 1.0) {
+            printf("   📏 Distance error too large (%.2f\")\n", distance_error);
+            if (distance_error > 0) {
+                printf("   Robot overshoots - try reducing DRIVE_KP to %.2f\n", DRIVE_KP - 0.2);
+            } else {
+                printf("   Robot undershoots - try increasing DRIVE_KP to %.2f\n", DRIVE_KP + 0.2);
+            }
+            printf("   Or adjust TRACKING_WHEEL_DIAMETER in config.h\n");
+        }
+        if (fabs(heading_error) >= 3.0) {
+            printf("   🧭 Heading drift too large (%.2f°)\n", heading_error);
+            printf("   Check wheel alignment or adjust turn PID\n");
+            if (fabs(heading_error) > 10.0) {
+                printf("   Try reducing TURN_KP to %.2f\n", TURN_KP - 0.2);
+            }
+        }
+    }
+}
+
+void AutonomousSystem::testTurnAccuracy(double angle) {
+    printf("=== TURN ACCURACY TEST ===\n");
+    printf("Target angle: %.2f degrees\n", angle);
+    
+    // Reset position
+    setPosition(0, 0, 0);
+    
+    // Perform turn
+    uint32_t start_time = pros::millis();
+    turnToHeading(angle);
+    uint32_t end_time = pros::millis();
+    
+    // Check results
+    Position final_pos = current_position;
+    double angle_error = final_pos.heading - angle;
+    
+    printf("=== RESULTS ===\n");
+    printf("Target: %.2f degrees\n", angle);
+    printf("Actual: %.2f degrees\n", final_pos.heading);
+    printf("Error: %.2f degrees\n", angle_error);
+    printf("Time taken: %d ms\n", end_time - start_time);
+    
+    if (fabs(angle_error) < 2.0) {
+        printf("✅ PASS: Turn accuracy acceptable\n");
+        printf("   PID tuning looks good!\n");
+    } else {
+        printf("❌ FAIL: Needs PID tuning\n");
+        printf("   🔄 Turn error: %.2f degrees\n", angle_error);
+        
+        if (fabs(angle_error) > 10.0) {
+            printf("   Large overshoot - try reducing TURN_KP to %.2f\n", TURN_KP - 0.3);
+        } else if (fabs(angle_error) > 5.0) {
+            printf("   Moderate error - try adjusting TURN_KP to %.2f\n", 
+                   angle_error > 0 ? TURN_KP - 0.2 : TURN_KP + 0.2);
+        } else {
+            printf("   Small error - try increasing TURN_KI to %.3f\n", TURN_KI + 0.01);
+        }
+        
+        if (end_time - start_time > 3000) {
+            printf("   Slow response - try increasing TURN_KP to %.2f\n", TURN_KP + 0.2);
+        }
+    }
+}
+
+void AutonomousSystem::testPointToPoint() {
+    printf("=== POINT-TO-POINT NAVIGATION TEST ===\n");
+    
+    // Define test path (square pattern)
+    Position waypoints[] = {
+        {0, 0, 0},      // Start
+        {24, 0, 0},     // Point 1: 24" forward
+        {24, 24, 0},    // Point 2: 24" right
+        {0, 24, 0},     // Point 3: 24" back
+        {0, 0, 0}       // Return to start
+    };
+    
+    setPosition(0, 0, 0);
+    
+    uint32_t total_start_time = pros::millis();
+    
+    for (int i = 1; i < 5; i++) {
+        printf("Moving to waypoint %d: (%.0f, %.0f)\n", 
+               i, waypoints[i].x, waypoints[i].y);
+        
+        driveToPoint(waypoints[i].x, waypoints[i].y);
+        
+        Position current = current_position;
+        double error = sqrt(pow(current.x - waypoints[i].x, 2) + 
+                           pow(current.y - waypoints[i].y, 2));
+        
+        printf("Reached: (%.2f, %.2f) - Error: %.2f inches\n", 
+               current.x, current.y, error);
+        
+        pros::delay(1000);  // Pause between waypoints
+    }
+    
+    uint32_t total_end_time = pros::millis();
+    
+    // Final accuracy check
+    Position final = current_position;
+    double return_error = sqrt(final.x * final.x + final.y * final.y);
+    
+    printf("=== RESULTS ===\n");
+    printf("Return to start error: %.2f inches\n", return_error);
+    printf("Total test time: %d ms\n", total_end_time - total_start_time);
+    
+    if (return_error < 3.0) {
+        printf("✅ PASS: Navigation system working well\n");
+    } else {
+        printf("❌ FAIL: Significant odometry drift\n");
+        printf("   Check encoder mounting and wheel contact\n");
+        printf("   Verify TRACKING_WHEEL_DIAMETER setting\n");
+    }
+}
+
+void AutonomousSystem::testOdometryAccuracy() {
+    printf("=== ODOMETRY ACCURACY TEST ===\n");
+    printf("This test requires manual measurement!\n");
+    printf("1. Mark robot's current position\n");
+    printf("2. Press any controller button to continue...\n");
+    
+    // Wait for controller input
+    pros::Controller controller(pros::E_CONTROLLER_MASTER);
+    while (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_A) &&
+           !controller.get_digital(pros::E_CONTROLLER_DIGITAL_B) &&
+           !controller.get_digital(pros::E_CONTROLLER_DIGITAL_X) &&
+           !controller.get_digital(pros::E_CONTROLLER_DIGITAL_Y)) {
+        pros::delay(20);
+    }
+    
+    setPosition(0, 0, 0);
+    printf("Position reset to (0, 0, 0°)\n");
+    
+    // Move in a complex pattern
+    driveToPoint(18, 0);     // Forward 18"
+    driveToPoint(18, 12);    // Right 12"
+    driveToPoint(6, 12);     // Back 12"
+    driveToPoint(6, 6);      // Back 6"
+    driveToPoint(0, 6);      // Left 6"
+    driveToPoint(0, 0);      // Return to start
+    
+    Position final = current_position;
+    printf("=== FINAL POSITION ===\n");
+    printf("Odometry says: (%.2f, %.2f, %.2f°)\n", 
+           final.x, final.y, final.heading);
+    printf("Manually measure distance from starting mark.\n");
+    printf("Good accuracy: < 2 inches from start\n");
+}
+
+void AutonomousSystem::printSensorReadings() {
+    printf("=== SENSOR READINGS ===\n");
+    printf("Vertical encoder: %d ticks\n", vertical_encoder.get_value());
+    printf("Horizontal encoder: %d ticks\n", horizontal_encoder.get_value());
+    printf("Gyro heading: %.2f degrees\n", gyro.get_heading());
+    printf("Gyro status: %s\n", gyro.is_calibrating() ? "Calibrating" : "Ready");
+    printf("Position: (%.2f, %.2f, %.2f°)\n", 
+           current_position.x, current_position.y, current_position.heading);
+}

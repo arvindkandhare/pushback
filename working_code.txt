@@ -1,0 +1,369 @@
+#include "main.h"
+#include "lemlib/api.hpp" // IWYU pragma: keep
+#include "pros/motors.h"
+#include <cstdio>
+#include <cmath>
+#include <utility> // for std::pair
+
+// controller
+pros::Controller controller(pros::E_CONTROLLER_MASTER);
+
+// motor groups
+pros::MotorGroup leftMotors({-3, -4, -15},
+                            pros::MotorGearset::blue); // left motor group - ports 3 (reversed), 4, 5 (reversed)
+pros::MotorGroup rightMotors({2, 6, 16}, pros::MotorGearset::blue); // right motor group - ports 6, 7, 9 (reversed)
+
+// Inertial Sensor on port 10
+pros::Imu imu(13);
+
+// tracking wheels
+// horizontal tracking wheel encoder. Rotation sensor, port 20, not reversed
+pros::Rotation horizontalEnc(10);
+// vertical tracking wheel encoder. Rotation sensor, port 11, reversed
+pros::Rotation verticalEnc(-9);
+// horizontal tracking wheel. 2.75" diameter, 5.75" offset, back of the robot (negative)
+lemlib::TrackingWheel horizontal(&horizontalEnc, lemlib::Omniwheel::NEW_2, 4.273);
+// vertical tracking wheel. 2.75" diameter, 2.5" offset, left of the robot (negative)
+lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_2, 3.3215);
+
+// drivetrain settings
+lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
+                              &rightMotors, // right motor group
+                              12.5, // 10 inch track width
+                              lemlib::Omniwheel::NEW_325, // using new 4" omnis
+                              450, // drivetrain rpm is 360
+                              2 // horizontal drift is 2. If we had traction wheels, it would have been 8
+);
+
+// lateral motion controller
+lemlib::ControllerSettings linearController(20, // proportional gain (kP)
+                                            0, // integral gain (kI)
+                                            110, // derivative gain (kD)
+                                            0, // anti windup
+                                            0.25, // small error range, in inches
+                                            10, // small error range timeout, in milliseconds
+                                            0.5, // large error range, in inches
+                                            50, // large error range timeout, in milliseconds
+                                            1 // maximum acceleration (slew)
+);
+
+// forward PID
+lemlib::ControllerSettings linearForward(20, 0, 120, 3, 1, 50, 10, 250, 10);
+// backward PID (different values tuned for reverse motion)
+lemlib::ControllerSettings linearBackward(20, 0, 120, 3, 1, 50, 10, 250, 10);
+
+
+
+
+
+// angular motion controller
+lemlib::ControllerSettings angularController(2, // proportional gain (kP)
+                                             0, // integral gain (kI)
+                                             4, // derivative gain (kD)
+                                             0, // anti windup
+                                             0.2, // small error range, in degrees
+                                             10, // small error range timeout, in milliseconds
+                                             0.75, // large error range, in degrees
+                                             50, // large error range timeout, in milliseconds
+                                             0 // maximum acceleration (slew)
+);
+
+// angular motion controller
+lemlib::ControllerSettings angularTurnController(4, // proportional gain (kP)
+                                             0, // integral gain (kI)
+                                             9, // derivative gain (kD)
+                                             0, // anti windup
+                                             0.2, // small error range, in degrees
+                                             10, // small error range timeout, in milliseconds
+                                             0.5, // large error range, in degrees
+                                             50, // large error range timeout, in milliseconds
+                                             0 // maximum acceleration (slew)
+);
+
+// angular motion controller
+lemlib::ControllerSettings angularShortTurnController(4, // proportional gain (kP)
+                                             0, // integral gain (kI)
+                                             8, // derivative gain (kD)
+                                             0, // anti windup
+                                             0.2, // small error range, in degrees
+                                             10, // small error range timeout, in milliseconds
+                                             0.5, // large error range, in degrees
+                                             50, // large error range timeout, in milliseconds
+                                             0 // maximum acceleration (slew)
+);
+
+
+// sensors for odometry
+lemlib::OdomSensors sensors(&vertical, // vertical tracking wheel
+                            nullptr, // vertical tracking wheel 2, set to nullptr as we don't have a second one
+                            &horizontal, // horizontal tracking wheel
+                            nullptr, // horizontal tracking wheel 2, set to nullptr as we don't have a second one
+                            &imu // inertial sensor
+);
+
+// input curve for throttle input during driver control
+lemlib::ExpoDriveCurve throttleCurve(3, // joystick deadband out of 127
+                                     10, // minimum output where drivetrain will move out of 127
+                                     1.019 // expo curve gain
+);
+
+// input curve for steer input during driver control
+lemlib::ExpoDriveCurve steerCurve(3, // joystick deadband out of 127
+                                  10, // minimum output where drivetrain will move out of 127
+                                  1.019 // expo curve gain
+);
+
+// create the chassis
+lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors, &throttleCurve, &steerCurve);
+lemlib::Chassis chassisTurn(drivetrain, linearController, angularTurnController, sensors, &throttleCurve, &steerCurve);
+lemlib::Chassis chassisTurnShort(drivetrain, linearController, angularShortTurnController, sensors, &throttleCurve, &steerCurve);
+
+/**
+ * Runs initialization code. This occurs as soon as the program is started.
+ *
+ * All other competition modes are blocked by initialize; it is recommended
+ * to keep execution time for this mode under a few seconds.
+ */
+void initialize() {
+    pros::lcd::initialize(); // initialize brain screen
+    leftMotors.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+    rightMotors.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+
+    chassis.calibrate(); // calibrate sensors
+
+    // the default rate is 50. however, if you need to change the rate, you
+    // can do the following.
+    // lemlib::bufferedStdout().setRate(...);
+    // If you use bluetooth or a wired connection, you will want to have a rate of 10ms
+
+    // for more information on how the formatting for the loggers
+    // works, refer to the fmtlib docs
+
+    // thread to for brain screen and position logging
+    pros::Task screenTask([&]() {
+    while (true) {
+        auto pose = chassis.getPose();
+
+        // get elapsed time since robot started in seconds
+        double timeSec = pros::millis() / 1000.0;
+
+        // print time and pose, comma-separated
+        printf("%.2f, %.2f, %.2f, %.2f\n", timeSec, pose.y, pose.x, pose.theta);
+        pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
+        pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
+        pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
+        //printf("%.2f, %.2f, %.2f, %.2f\n", timeSec, pose.x*5, pose.y*5, pose.theta);
+
+        pros::delay(50);
+    }
+    });
+
+
+    pros::delay(500);
+
+    autonomous();
+}
+
+/**
+ * Runs while the robot is disabled
+ */
+void disabled() {}
+
+/**
+ * runs after initialize if the robot is connected to field control
+ */
+void competition_initialize() {}
+
+// get a path used for pure pursuit
+// this needs to be put outside a function
+ASSET(example_txt); // '.' replaced with "_" to make c++ 
+ASSET(StraightLine_txt);
+ASSET(Curve_txt);
+ASSET(Circle_txt);
+ASSET(BigCircle_txt);
+ASSET(Zigzag_txt);
+
+
+// --- Helper function (place this ABOVE autonomous) ---
+double angleToPoint(double currentX, double currentY, double targetX, double targetY) {
+    double deltaX = targetX - currentX;
+    double deltaY = targetY - currentY;
+    double angle = atan2(deltaY, deltaX) * 180.0 / M_PI; // radians → degrees
+    return angle;
+}
+
+
+std::pair<double, double> getForwardTarget(double distance) {
+    // Get current pose
+    double x = chassis.getPose().x;
+    double y = chassis.getPose().y;
+    double theta = chassis.getPose().theta * M_PI / 180.0; // convert to radians
+
+    // Calculate target point based on heading
+    double targetX = x + distance * sin(theta);
+    double targetY = y + distance * cos(theta);
+
+    return {targetX, targetY};
+}
+
+
+
+void autonomous() {
+    //chassis.setPose(0, 0, 0);
+
+    //Blue Right
+    //Start Pose
+    chassis.setPose(0, 0, 60);
+    
+
+    double offset = 0; // cumulative correction
+
+    
+
+    auto moveWithTolerance = [&](double x, double y, double theta, bool forwards, float maxSpeed, double tolerance) {
+        // Compute commanded distance
+        double targetDistance = sqrt(x * x + y * y);
+
+        // Apply offset depending on direction
+        double correctedY = y;
+        
+        correctedY -= offset;
+        
+
+        chassis.moveToPose(x, correctedY, theta, 5000000, {.forwards = forwards, .maxSpeed = maxSpeed});
+
+        int stagnantCount = 0;
+        double lastError = std::numeric_limits<double>::max();
+        double tolerancePos = 5;
+        while (true) {
+            auto pose = chassis.getPose();
+            double errorX = x - pose.x;
+            double errorY = correctedY - pose.y;
+            double distanceError = sqrt(errorX * errorX + errorY * errorY);
+
+            if (fabs(distanceError - lastError) < 0.05) {
+                stagnantCount++;
+            } else {
+                stagnantCount = 0;
+            }
+            lastError = distanceError;
+
+            if (stagnantCount > 3 && distanceError <= tolerancePos) {
+                leftMotors.brake();
+                rightMotors.brake();
+                chassis.cancelMotion();
+                break;
+            }
+            pros::delay(5);
+        }
+
+        // Scale offset by commanded distance (say 2%)
+        //offset += targetDistance * 0.02;
+    };
+
+
+    auto turnWithTolerance = [&](double targetTheta, float maxSpeed, double toleranceDeg) {
+        if (abs(chassis.getPose().theta - targetTheta) < 50) {
+            chassisTurnShort.turnToHeading(targetTheta, 3000, {.maxSpeed = static_cast<int>(maxSpeed)});
+        } else {
+            chassisTurn.turnToHeading(targetTheta, 3000, {.maxSpeed = static_cast<int>(maxSpeed)});
+        }
+
+        int stagnantCount = 0;
+        double lastError = std::numeric_limits<double>::max();
+
+        while (true) {
+            auto pose = chassis.getPose();
+            double errorTheta = targetTheta - pose.theta;
+
+            // Wrap error to [-180, 180] so we always take the shortest angle
+            while (errorTheta > 180) errorTheta -= 360;
+            while (errorTheta < -180) errorTheta += 360;
+
+            // Check if error hasn't changed significantly
+            if (fabs(errorTheta - lastError) < 0.05) {
+                stagnantCount++;
+            } else {
+                stagnantCount = 0;
+            }
+            lastError = errorTheta;
+
+            // If close enough AND stagnant for a bit, stop
+            if (stagnantCount > 3 && fabs(errorTheta) <= toleranceDeg) {
+                printf("Stop\n");
+                leftMotors.brake();
+                rightMotors.brake();
+                chassisTurn.cancelMotion();
+                break;
+            }
+
+            pros::delay(5);
+        }
+    };
+
+    //Auto Movements Here:
+
+    //ADD INTAKING HERE (START THE MOTORS FOR INTAKE)
+
+    // Move to first point
+    auto [targetX, targetY] = getForwardTarget(35.5);
+    moveWithTolerance(targetX, targetY, 60, true, 60, 0.5);
+    //std::tie(targetX, targetY) = getForwardTarget(10);
+    //moveWithTolerance(targetX, targetY, 60, true, 70, 0.5);
+    pros::delay(100);
+    turnWithTolerance(180, 80, 2.5);
+    pros::delay(100);
+
+    // Move to second point
+    std::tie(targetX, targetY) = getForwardTarget(-12);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 40, 0.5);
+    
+    //ADD BACKSCORING MIDDLE HERE
+    
+    pros::delay(50);
+    std::tie(targetX, targetY) = getForwardTarget(27);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    turnWithTolerance(160, 100, 2.0);
+    pros::delay(50);
+    std::tie(targetX, targetY) = getForwardTarget(22);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    pros::delay(50);
+    turnWithTolerance(225, 80, 2.5);
+    std::tie(targetX, targetY) = getForwardTarget(23.5);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    
+    
+    pros::delay(1000);
+    // ADD INTAKE FROM MATCH LOAD HERE (START INTAKE MOTORS)
+    
+    turnWithTolerance(231, 140, 2.5);
+    std::tie(targetX, targetY) = getForwardTarget(-35);
+    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 100, 0.5);
+    pros::delay(50);
+
+    //ADD TOP BACKSCORING HERE
+
+    chassis.waitUntil(10);
+    chassis.waitUntilDone();
+
+    pros::lcd::print(4, "autonomous finished!");
+
+    
+}
+
+/**
+ * Runs in driver control
+ */
+void opcontrol() {
+    // controller
+    // loop to continuously update motors
+    while (true) {
+        // get joystick positions
+        int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+        // move the chassis with curvature drive
+        chassis.arcade(leftY, rightX);
+        // delay to save resources
+        pros::delay(10);
+    }
+}

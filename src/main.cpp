@@ -18,7 +18,15 @@
 
 #include "main.h"
 #include "indexer.h"
+#include "intake.h"
+#include "autonomous.h"
 
+// Global robot subsystems (declared here for access in all functions)
+pros::Controller master(pros::E_CONTROLLER_MASTER);
+PTO pto_system;
+IndexerSystem indexer_system(&pto_system);
+Intake intake_system;
+AutonomousSystem autonomous_system(&drivetrain, &pto_system, &indexer_system);
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -34,7 +42,10 @@ void initialize() {
 	
 	// Brief delay for initialization
 	printf("Robot initializing...\n");
-	pros::delay(1000);
+	pros::delay(500);
+	
+	// Initialize autonomous system (includes gyro calibration)
+	autonomous_system.initialize();
 	
 	printf("=== INITIALIZATION COMPLETE ===\n");
 }
@@ -48,8 +59,16 @@ void initialize() {
  * the robot is enabled, this task will exit.
  */
 void disabled() {
-	// Simple console message, avoid LCD conflicts
-	printf("Robot DISABLED - waiting for enable...\n");
+	// Update autonomous selector while disabled
+	static int update_counter = 0;
+	
+	// Update selector every 100ms
+	if (update_counter % 5 == 0) {
+		autonomous_system.update();
+	}
+	update_counter++;
+	
+	pros::delay(20);
 }
 
 /**
@@ -66,9 +85,10 @@ void competition_initialize() {
 	// For example: autonomous routine selector, alliance color selection, etc.
 	
 	printf("Competition Mode - Pushback Robot Ready\n");
-	// Only update LCD if not in use by other functions
-	pros::lcd::set_text(0, "Competition Mode");
-	pros::lcd::set_text(1, "Robot Ready");
+	printf("Use LCD to select autonomous mode\n");
+	
+	// The autonomous selector will display on LCD
+	// Update continuously until autonomous starts
 }
 
 /**
@@ -83,23 +103,16 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
-	// TODO: Implement autonomous routines
-	// This is a placeholder for future autonomous development
+	printf("=== AUTONOMOUS STARTED ===\n");
 	
-	printf("Autonomous Mode - No routine implemented\n");
-	pros::lcd::set_text(0, "Autonomous Mode");
-	pros::lcd::set_text(1, "No routine");
+	// Display selected mode
+	AutoMode mode = autonomous_system.getSelector().getSelectedMode();
+	printf("Selected autonomous mode: %d\n", static_cast<int>(mode));
 	
-	// Example autonomous actions (commented out):
-	// 1. Drive forward for 2 seconds
-	// drivetrain.tankDrive(100, 100);
-	// pros::delay(2000);
-	// drivetrain.stop();
+	// Run the selected autonomous routine
+	autonomous_system.runAutonomous();
 	
-	// 2. Toggle PTO and use scorer
-	// pto_system.setScorerMode();
-	// pros::delay(1000);
-	// pto_system.setDrivetrainMode();
+	printf("=== AUTONOMOUS COMPLETE ===\n");
 }
 
 /**
@@ -118,12 +131,7 @@ void autonomous() {
 void opcontrol() {
 	printf("=== OPCONTROL STARTED ===\n");
 	
-	// Global robot subsystems
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	PTO pto_system;
-	Drivetrain drivetrain(&pto_system);
-	IndexerSystem indexer_system(&pto_system);
-	Intake intake_system;  // New intake mechanism
+	// Global subsystems are already created at file scope
 	
 	// Initialize LCD for opcontrol mode
 	pros::lcd::set_text(0, "OPCONTROL ACTIVE");
