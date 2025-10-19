@@ -146,12 +146,20 @@ void opcontrol() {
 		counter++;
 		lcd_update_counter++;
 
-		// TEMP: Press X to run autonomous ONCE for testing
-		if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X) && !auton_ran) {
-			printf("[TEST] X pressed: Running autonomous routine!\n");
-			pros::lcd::set_text(2, "[TEST] Running Auton");
-			autonomous();
-			auton_ran = true;
+		// TEMP: Hold L1+L2 for 1500ms to run autonomous ONCE for testing (reduces accidental presses)
+		static uint32_t hold_start = 0;
+		bool l1 = master.get_digital(pros::E_CONTROLLER_DIGITAL_L1);
+		bool l2 = master.get_digital(pros::E_CONTROLLER_DIGITAL_L2);
+		if (l1 && l2) {
+			if (hold_start == 0) hold_start = pros::millis();
+			else if (!auton_ran && pros::millis() - hold_start >= 1500) {
+				printf("[TEST] L1+L2 held: Running autonomous routine!\n");
+				pros::lcd::set_text(2, "[TEST] Running Auton");
+				autonomous();
+				auton_ran = true;
+			}
+		} else {
+			hold_start = 0;
 		}
 
 		// Print debug info every second (50Hz * 50 = 1 second)
