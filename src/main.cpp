@@ -20,13 +20,42 @@
 #include "indexer.h"
 #include "intake.h"
 #include "autonomous.h"
+#include "lemlib_config.h"
 
-// Global robot subsystems (declared here for access in all functions)
-pros::Controller master(pros::E_CONTROLLER_MASTER);
-PTO pto_system;
-IndexerSystem indexer_system(&pto_system);
-Intake intake_system;
-AutonomousSystem autonomous_system(&drivetrain, &pto_system, &indexer_system);
+// Global robot subsystems (pointers to avoid early construction)
+pros::Controller* master = nullptr;
+PTO* pto_system = nullptr;
+Drivetrain* custom_drivetrain = nullptr;
+IndexerSystem* indexer_system = nullptr;
+Intake* intake_system = nullptr;
+AutonomousSystem* autonomous_system = nullptr;
+
+/**
+ * Initialize all global subsystems.
+ * This creates objects after the VEX system is properly initialized.
+ */
+void initializeGlobalSubsystems() {
+    printf("Initializing global subsystems...\n");
+    
+    // Initialize LemLib first (this ensures motor objects exist)
+    initializeLemLib();
+    
+    // Create controller
+    master = new pros::Controller(pros::E_CONTROLLER_MASTER);
+    
+    // Create PTO system
+    pto_system = new PTO();
+    
+    // Create drivetrain (now uses LemLib motor references)
+    custom_drivetrain = new Drivetrain(pto_system);
+    
+    // Create subsystems that depend on other systems
+    indexer_system = new IndexerSystem(pto_system);
+    intake_system = new Intake();
+    autonomous_system = new AutonomousSystem(custom_drivetrain, pto_system, indexer_system);
+    
+    printf("Global subsystems initialized!\n");
+}
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -44,8 +73,11 @@ void initialize() {
 	printf("Robot initializing...\n");
 	pros::delay(500);
 	
+	// Initialize global subsystems FIRST (after VEX system is ready)
+	initializeGlobalSubsystems();
+	
 	// Initialize autonomous system (includes gyro calibration)
-	autonomous_system.initialize();
+	autonomous_system->initialize();
 	
 	printf("=== INITIALIZATION COMPLETE ===\n");
 }
@@ -64,7 +96,7 @@ void disabled() {
 	
 	// Update selector every 100ms
 	if (update_counter % 5 == 0) {
-		autonomous_system.update();
+		autonomous_system->update();
 	}
 	update_counter++;
 	
@@ -106,11 +138,11 @@ void autonomous() {
 	printf("=== AUTONOMOUS STARTED ===\n");
 	
 	// Display selected mode
-	AutoMode mode = autonomous_system.getSelector().getSelectedMode();
+	AutoMode mode = autonomous_system->getSelector().getSelectedMode();
 	printf("Selected autonomous mode: %d\n", static_cast<int>(mode));
 	
 	// Run the selected autonomous routine
-	autonomous_system.runAutonomous();
+	autonomous_system->runAutonomous();
 	
 	printf("=== AUTONOMOUS COMPLETE ===\n");
 }
@@ -148,8 +180,8 @@ void opcontrol() {
 
 		// TEMP: Hold L1+L2 for 1500ms to run autonomous ONCE for testing (reduces accidental presses)
 		static uint32_t hold_start = 0;
-		bool l1 = master.get_digital(pros::E_CONTROLLER_DIGITAL_L1);
-		bool l2 = master.get_digital(pros::E_CONTROLLER_DIGITAL_L2);
+		bool l1 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L1);
+		bool l2 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L2);
 		if (l1 && l2) {
 			if (hold_start == 0) hold_start = pros::millis();
 			else if (!auton_ran && pros::millis() - hold_start >= 1500) {
@@ -172,8 +204,8 @@ void opcontrol() {
 			lcd_update_counter = 0;
 
 			// Check controller connection and update LCD
-			if (master.is_connected()) {
-				master.print(0, 0, "Connected: %d", counter / 50);
+			if (master->is_connected()) {
+				master->print(0, 0, "Connected: %d", counter / 50);
 			} else {
 				pros::lcd::set_text(1, "Controller DISCONNECTED");
 				printf("Controller DISCONNECTED!\n");
@@ -181,10 +213,10 @@ void opcontrol() {
 		}
 
 		// Update all subsystems - this is where button mappings are handled
-		drivetrain.update(master);
-		pto_system.update(master);
-		indexer_system.update(master);
-		intake_system.update(master);  // Update intake system
+		custom_drivetrain->update(*master);
+		pto_system->update(*master);
+		indexer_system->update(*master);
+		intake_system->update(*master);  // Update intake system
 
 		pros::delay(20);  // 50Hz loop
 	}

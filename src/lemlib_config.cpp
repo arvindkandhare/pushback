@@ -16,7 +16,7 @@
 // DRIVETRAIN CONFIGURATION
 // =============================================================================
 
-// Create individual motors using PROS 4.2.1 API
+// Create individual motors using PROS 4.2.1 API with proper reversing
 pros::Motor left_front_motor(LEFT_MOTORS_REVERSED ? -LEFT_FRONT_MOTOR_PORT : LEFT_FRONT_MOTOR_PORT, pros::v5::MotorGears::green);
 pros::Motor left_middle_motor(LEFT_MOTORS_REVERSED ? -LEFT_MIDDLE_MOTOR_PORT : LEFT_MIDDLE_MOTOR_PORT, pros::v5::MotorGears::green);
 pros::Motor left_back_motor(LEFT_MOTORS_REVERSED ? -LEFT_BACK_MOTOR_PORT : LEFT_BACK_MOTOR_PORT, pros::v5::MotorGears::green);
@@ -25,9 +25,10 @@ pros::Motor right_front_motor(RIGHT_MOTORS_REVERSED ? -RIGHT_FRONT_MOTOR_PORT : 
 pros::Motor right_middle_motor(RIGHT_MOTORS_REVERSED ? -RIGHT_MIDDLE_MOTOR_PORT : RIGHT_MIDDLE_MOTOR_PORT, pros::v5::MotorGears::green);
 pros::Motor right_back_motor(RIGHT_MOTORS_REVERSED ? -RIGHT_BACK_MOTOR_PORT : RIGHT_BACK_MOTOR_PORT, pros::v5::MotorGears::green);
 
-// Create motor groups
-pros::MotorGroup left_motor_group({LEFT_FRONT_MOTOR_PORT, LEFT_MIDDLE_MOTOR_PORT, LEFT_BACK_MOTOR_PORT});
-pros::MotorGroup right_motor_group({RIGHT_FRONT_MOTOR_PORT, RIGHT_MIDDLE_MOTOR_PORT, RIGHT_BACK_MOTOR_PORT});
+// Create motor groups for LemLib (front and back wheels only for consistent drive)
+// Middle wheels will be managed separately due to PTO system
+pros::MotorGroup left_motor_group({LEFT_FRONT_MOTOR_PORT, LEFT_BACK_MOTOR_PORT});
+pros::MotorGroup right_motor_group({RIGHT_FRONT_MOTOR_PORT, RIGHT_BACK_MOTOR_PORT});
 
 // Drivetrain configuration
 lemlib::Drivetrain drivetrain(

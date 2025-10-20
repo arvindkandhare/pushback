@@ -34,12 +34,10 @@
  */
 #define PROS_USE_LITERALS
 
-#include "api.h"
-
 /**
  * You should add more #includes here
  */
-#include "config.h"
+#include "api.h"
 #include "pto.h"
 #include "drivetrain.h"
 #include "intake.h"
@@ -80,10 +78,23 @@ void opcontrol(void);
  */
 //#include <iostream>
 
-// Global variable declarations
-extern pros::Controller master;
-extern PTO pto_system;
-extern Drivetrain drivetrain;
+// Forward declarations for global subsystems
+class PTO;
+class Drivetrain;
+class IndexerSystem;
+class Intake;
+class AutonomousSystem;
+
+// Global variable declarations (these will be pointers to avoid early construction)
+extern pros::Controller* master;
+extern PTO* pto_system;
+extern Drivetrain* custom_drivetrain;  // Renamed to avoid conflict with lemlib::Drivetrain drivetrain
+extern IndexerSystem* indexer_system;
+extern Intake* intake_system;
+extern AutonomousSystem* autonomous_system;
+
+// Initialization function to create all global objects
+void initializeGlobalSubsystems();
 #endif
 
 #endif  // _PROS_MAIN_H_

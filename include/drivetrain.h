@@ -11,6 +11,7 @@
 #include "api.h"
 #include "config.h"
 #include "pto.h"
+#include "lemlib_config.h"  // For access to LemLib motor objects
 
 /**
  * Drivetrain class
@@ -25,21 +26,20 @@
  */
 class Drivetrain {
 private:
-    // Left side motors
-    pros::Motor left_front;   ///< Left front drive motor
-    pros::Motor left_middle;  ///< Left middle drive motor (PTO switchable)
-    pros::Motor left_back;    ///< Left back drive motor
+    // References to LemLib motor objects (no duplication)
+    pros::Motor& left_front;   ///< Reference to left front drive motor
+    pros::Motor& left_middle;  ///< Reference to left middle drive motor (PTO switchable)
+    pros::Motor& left_back;    ///< Reference to left back drive motor
 
-    // Right side motors  
-    pros::Motor right_front;  ///< Right front drive motor
-    pros::Motor right_middle; ///< Right middle drive motor (PTO switchable)
-    pros::Motor right_back;   ///< Right back drive motor
+    pros::Motor& right_front;  ///< Reference to right front drive motor
+    pros::Motor& right_middle; ///< Reference to right middle drive motor (PTO switchable)
+    pros::Motor& right_back;   ///< Reference to right back drive motor
 
     PTO* pto_system;          ///< Pointer to PTO system for mode checking
 
 public:
     /**
-     * Constructor - initializes all drivetrain motors
+     * Constructor - uses existing LemLib motor objects
      * @param pto Pointer to the PTO system for mode checking
      */
     Drivetrain(PTO* pto);
