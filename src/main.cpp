@@ -76,8 +76,14 @@ void initialize() {
 	// Initialize global subsystems FIRST (after VEX system is ready)
 	initializeGlobalSubsystems();
 	
+	// Controller display for initialization status
+	master->set_text(0, 0, "GYRO CAL...");
+	
 	// Initialize autonomous system (includes gyro calibration)
 	autonomous_system->initialize();
+	
+	// Display completion on controller
+	master->set_text(0, 0, "INIT DONE");
 	
 	printf("=== INITIALIZATION COMPLETE ===\n");
 }
@@ -137,12 +143,21 @@ void competition_initialize() {
 void autonomous() {
 	printf("=== AUTONOMOUS STARTED ===\n");
 	
+	// Display autonomous start on controller
+	master->set_text(0, 0, "AUTON START");
+	
 	// Display selected mode
 	AutoMode mode = autonomous_system->getSelector().getSelectedMode();
 	printf("Selected autonomous mode: %d\n", static_cast<int>(mode));
 	
+	// Show mode on controller
+	master->print(1, 0, "Mode: %d", static_cast<int>(mode));
+	
 	// Run the selected autonomous routine
 	autonomous_system->runAutonomous();
+	
+	// Display completion on controller
+	master->set_text(0, 0, "AUTON DONE");
 	
 	printf("=== AUTONOMOUS COMPLETE ===\n");
 }
@@ -163,11 +178,12 @@ void autonomous() {
 void opcontrol() {
 	printf("=== OPCONTROL STARTED ===\n");
 	
+	// Display opcontrol start on controller
+	master->set_text(0, 0, "OPCONTROL!");
+	master->rumble("-.-"); // Short-long-short rumble
+	
 	// Global subsystems are already created at file scope
 	
-	// Initialize LCD for opcontrol mode
-	pros::lcd::set_text(0, "OPCONTROL ACTIVE");
-	pros::lcd::set_text(1, "Tank Drive Ready");
 	
 	static int counter = 0;
 	static int lcd_update_counter = 0;
@@ -183,19 +199,25 @@ void opcontrol() {
 		bool l1 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L1);
 		bool l2 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L2);
 		if (l1 && l2) {
-			if (hold_start == 0) hold_start = pros::millis();
+			if (hold_start == 0) {
+				hold_start = pros::millis();
+				master->set_text(1, 0, "L1+L2 HOLD...");
+			}
 			else if (!auton_ran && pros::millis() - hold_start >= 1500) {
 				printf("[TEST] L1+L2 held: Running autonomous routine!\n");
-				pros::lcd::set_text(2, "[TEST] Running Auton");
+				master->set_text(1, 0, "TEST AUTON!");
 				autonomous();
 				auton_ran = true;
 			}
 		} else {
 			hold_start = 0;
+			if (counter % 500 == 0) { // Update every second
+				master->print(1, 0, "Time: %ds", counter / 50);
+			}
 		}
 
 		// Print debug info every second (50Hz * 50 = 1 second)
-		if (counter % 50 == 0) {
+		if (counter % 500 == 0) {
 			printf("OPCONTROL LOOP: %d seconds\n", counter / 50);
 		}
 
@@ -205,9 +227,9 @@ void opcontrol() {
 
 			// Check controller connection and update LCD
 			if (master->is_connected()) {
-				master->print(0, 0, "Connected: %d", counter / 50);
+				master->print(0, 0, "OK: %ds", counter / 50);
 			} else {
-				pros::lcd::set_text(1, "Controller DISCONNECTED");
+				master->set_text(0, 0, "DISCONN!");
 				printf("Controller DISCONNECTED!\n");
 			}
 		}
