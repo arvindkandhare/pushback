@@ -205,7 +205,7 @@ void opcontrol() {
 			}
 			else if (!auton_ran && pros::millis() - hold_start >= 1500) {
 				printf("[TEST] L1+L2 held: Running autonomous routine!\n");
-				master->set_text(1, 0, "TEST AUTON!");
+				//pros::lcd::set_text(2, "[TEST] Running Auton");
 				autonomous();
 				auton_ran = true;
 			}
@@ -229,7 +229,7 @@ void opcontrol() {
 			if (master->is_connected()) {
 				master->print(0, 0, "OK: %ds", counter / 50);
 			} else {
-				master->set_text(0, 0, "DISCONN!");
+//				pros::lcd::set_text(1, "Controller DISCONNECTED");
 				printf("Controller DISCONNECTED!\n");
 			}
 		}
