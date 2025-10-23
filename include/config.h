@@ -40,12 +40,12 @@
 
 // PTO (Power Take-Off) pneumatic cylinders
 // These control whether middle wheels are connected to drivetrain or scorer
-#define PTO_LEFT_PNEUMATIC      'A'  // ADI port A
-#define PTO_RIGHT_PNEUMATIC     'B'  // ADI port B
+#define PTO_LEFT_PNEUMATIC      'A'  // ADI port A (drives both PTOs)
+#define PTO_RIGHT_PNEUMATIC     'A'  // ADI port A (same as left - both PTOs)
 
 // Front scoring flap pneumatic
 // Controls flap that holds balls for front scoring
-#define FRONT_FLAP_PNEUMATIC    'C'  // ADI port C
+#define FRONT_FLAP_PNEUMATIC    'B'  // ADI port B (moved from C)
 
 // Intake mechanism pneumatic
 // Controls intake extension/retraction for collecting balls from tubes
@@ -103,8 +103,8 @@
 #define PTO_RETRACTED   true  // Retracted = scorer mode (2-wheel drive, middle wheels for scorer)
 
 // Front flap pneumatic states
-#define FRONT_FLAP_OPEN   true   // Open = balls can score through front
-#define FRONT_FLAP_CLOSED false  // Closed = balls held against flap
+#define FRONT_FLAP_OPEN   false  // Open = balls can score through front (reversed due to wiring)
+#define FRONT_FLAP_CLOSED true   // Closed = balls held against flap (reversed due to wiring)
 
 // Default PTO state on robot startup
 #define PTO_DEFAULT_STATE PTO_EXTENDED
