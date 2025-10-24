@@ -63,6 +63,7 @@ private:
     uint32_t scoring_start_time;    ///< Time when scoring sequence started
     uint32_t input_start_time;      ///< Time when input motor started
     bool input_motor_active;        ///< True when input motor is running
+    bool score_from_top_storage;    ///< True when scoring from top storage is enabled
     
     // Button state tracking (for edge detection)
     bool last_collection_button;
@@ -71,6 +72,7 @@ private:
     bool last_top_goal_button;
     bool last_front_execute_button;
     bool last_back_execute_button;
+    bool last_storage_toggle_button;
 
 public:
     /**
@@ -204,6 +206,17 @@ public:
      * Stop right indexer motor - for testing only
      */
     void stopRightIndexer();
+
+    /**
+     * Toggle score from top storage mode on/off
+     */
+    void toggleStorageMode();
+
+    /**
+     * Get current storage mode state
+     * @return True if scoring from top storage is enabled
+     */
+    bool isStorageModeActive() const;
 
 private:
     /**

@@ -80,6 +80,9 @@
 // Intake mechanism control - DOWN button
 #define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (extend/retract)
 
+// Storage scoring control - LEFT button
+#define STORAGE_TOGGLE_BUTTON     pros::E_CONTROLLER_DIGITAL_LEFT // Toggle score from top storage mode
+
 // =============================================================================
 // MOTOR CONFIGURATION CONSTANTS
 // =============================================================================
@@ -168,6 +171,10 @@
 // Top indexer speeds
 #define TOP_INDEXER_FRONT_SPEED               150   // Top indexer when scoring front
 #define TOP_INDEXER_BACK_SPEED                -150   // Top indexer when scoring back (opposite)
+
+// Storage mode speeds - for moving balls from top storage back toward intake
+#define TOP_INDEXER_STORAGE_SPEED             -120   // Top indexer moves balls back from storage
+#define FRONT_INDEXER_STORAGE_SPEED           120    // Front indexer moves balls back from storage
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION
