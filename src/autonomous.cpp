@@ -346,105 +346,32 @@ void AutonomousSystem::printPosition() {
 // =============================================================================
 
 void AutonomousSystem::executeRedLeftAWP() {
-    printf("Executing Red Right AWP Route (ported)\n");
+    printf("Executing Red Left AWP Route\n");
     autonomous_running = true;
 
-    // Use LemLib chassis and calibrated movement from working_code.txt
-    // Set starting pose (matches working code)
+    // Set starting pose
     chassis.setPose(0, 0, 60);
 
-    double offset = 0; // cumulative correction (unused but preserved)
-
-    // Helper lambdas ported from working code
-    auto getForwardTarget = [&](double distance) {
-        double x = chassis.getPose().x;
-        double y = chassis.getPose().y;
-        double theta = chassis.getPose().theta * M_PI / 180.0; // radians
-        double targetX = x + distance * sin(theta);
-        double targetY = y + distance * cos(theta);
-        return std::make_pair(targetX, targetY);
-    };
-
-    auto moveWithTolerance = [&](double x, double y, double theta, bool forwards, float maxSpeed, double tolerance) {
-        double targetDistance = sqrt(x * x + y * y);
-        double correctedY = y - offset;
-
-    lemlib::MoveToPoseParams moveParams;
-    moveParams.forwards = forwards;
-    moveParams.maxSpeed = static_cast<float>(maxSpeed);
-    chassis.moveToPose(x, correctedY, theta, 5000000, moveParams);
-
-        int stagnantCount = 0;
-        double lastError = std::numeric_limits<double>::max();
-        double tolerancePos = 5;
-        while (true) {
-            auto pose = chassis.getPose();
-            double errorX = x - pose.x;
-            double errorY = correctedY - pose.y;
-            double distanceError = sqrt(errorX * errorX + errorY * errorY);
-
-            if (fabs(distanceError - lastError) < 0.05) {
-                stagnantCount++;
-            } else {
-                stagnantCount = 0;
-            }
-            lastError = distanceError;
-
-            if (stagnantCount > 3 && distanceError <= tolerancePos) {
-                drivetrain->stop();
-                chassis.cancelMotion();
-                break;
-            }
-            pros::delay(5);
-        }
-    };
-
-    auto turnWithTolerance = [&](double targetTheta, float maxSpeed, double toleranceDeg) {
-        // Use the main chassis for turning; set params for maxSpeed
-        lemlib::TurnToHeadingParams turnParams;
-        turnParams.maxSpeed = static_cast<int>(maxSpeed);
-        chassis.turnToHeading(targetTheta, 3000, turnParams);
-
-        int stagnantCount = 0;
-        double lastError = std::numeric_limits<double>::max();
-
-        while (true) {
-            auto pose = chassis.getPose();
-            double errorTheta = targetTheta - pose.theta;
-            while (errorTheta > 180) errorTheta -= 360;
-            while (errorTheta < -180) errorTheta += 360;
-
-            if (fabs(errorTheta - lastError) < 0.05) {
-                stagnantCount++;
-            } else {
-                stagnantCount = 0;
-            }
-            lastError = errorTheta;
-
-            if (stagnantCount > 3 && fabs(errorTheta) <= toleranceDeg) {
-                drivetrain->stop();
-                chassis.cancelMotion();
-                break;
-            }
-            pros::delay(5);
-        }
-    };
-
-    // --- Auto Movements (ported) ---
-
-    // START INTAKE (match comment: ADD INTAKING HERE)
+    // START INTAKE
     indexer_system->startInput();
 
     // Move forward ~35.5"
-    auto [targetX, targetY] = getForwardTarget(35.5);
-    moveWithTolerance(targetX, targetY, 60, true, 60, 0.5);
+    chassis.moveToPoint(35.5 * sin(60 * M_PI / 180.0), 35.5 * cos(60 * M_PI / 180.0), 5000);
+    chassis.waitUntilDone();
+    
     pros::delay(100);
-    turnWithTolerance(180, 80, 2.5);
+    
+    // Turn to 180°
+    chassis.turnToHeading(180, 3000);
+    chassis.waitUntilDone();
+    
     pros::delay(100);
 
     // Back up ~12"
-    std::tie(targetX, targetY) = getForwardTarget(-12);
-    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 40, 0.5);
+    auto pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 12 * sin(180 * M_PI / 180.0), 
+                       pose.y - 12 * cos(180 * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
 
     // BACKSCORING MIDDLE - execute indexer back scoring sequence
     indexer_system->setMidGoalMode();
@@ -453,24 +380,46 @@ void AutonomousSystem::executeRedLeftAWP() {
     indexer_system->stopAll();
 
     pros::delay(50);
-    std::tie(targetX, targetY) = getForwardTarget(27);
-    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
-    turnWithTolerance(160, 100, 2.0);
+    
+    // Continue with remaining movements
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 27 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 27 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+    
+    chassis.turnToHeading(160, 3000);
+    chassis.waitUntilDone();
+    
     pros::delay(50);
-    std::tie(targetX, targetY) = getForwardTarget(22);
-    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 22 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 22 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+    
     pros::delay(50);
-    turnWithTolerance(225, 80, 2.5);
-    std::tie(targetX, targetY) = getForwardTarget(23.5);
-    moveWithTolerance(targetX, targetY, chassis.getPose().theta, true, 100, 0.5);
+    
+    chassis.turnToHeading(225, 3000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 23.5 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 23.5 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
 
     pros::delay(1000);
+    
     // START INTAKE FROM MATCH LOAD
     indexer_system->startInput();
 
-    turnWithTolerance(231, 140, 2.5);
-    std::tie(targetX, targetY) = getForwardTarget(-35);
-    moveWithTolerance(targetX, targetY, chassis.getPose().theta, false, 100, 0.5);
+    chassis.turnToHeading(231, 3000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 35 * sin(pose.theta * M_PI / 180.0),
+                       pose.y - 35 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+
     pros::delay(50);
 
     // TOP BACKSCORING - use back/top indexer
@@ -479,13 +428,10 @@ void AutonomousSystem::executeRedLeftAWP() {
     pros::delay(1200);
     indexer_system->stopAll();
 
-    chassis.waitUntil(10);
-    chassis.waitUntilDone();
-
     pros::lcd::print(4, "autonomous finished!");
 
     autonomous_running = false;
-    printf("Red Right AWP Route Complete\n");
+    printf("Red Left AWP Route Complete\n");
 }
 
 void AutonomousSystem::executeRedLeftBonus() {
@@ -495,9 +441,92 @@ void AutonomousSystem::executeRedLeftBonus() {
 }
 
 void AutonomousSystem::executeRedRightAWP() {
-    printf("Executing Red Right AWP Route\n");
-    // TODO: Implement Red Right AWP route (mirror of Red Left)
-    executeRedLeftAWP(); // Placeholder
+    printf("Executing Red Right AWP Route (clean LemLib version)\n");
+    autonomous_running = true;
+
+    // Set starting pose (matches working code)
+    chassis.setPose(0, 0, 60);
+
+    // START INTAKE
+    indexer_system->startInput();
+
+    // Move forward ~35.5"
+    chassis.moveToPoint(35.5 * sin(60 * M_PI / 180.0), 35.5 * cos(60 * M_PI / 180.0), 5000);
+    chassis.waitUntilDone();
+    
+    pros::delay(100);
+    
+    // Turn to 180°
+    chassis.turnToHeading(180, 3000);
+    chassis.waitUntilDone();
+    
+    pros::delay(100);
+
+    // Back up ~12"
+    auto pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 12 * sin(180 * M_PI / 180.0), 
+                       pose.y - 12 * cos(180 * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+
+    // BACKSCORING MIDDLE - execute indexer back scoring sequence
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(700); // brief pause for scoring
+    indexer_system->stopAll();
+
+    pros::delay(50);
+    
+    // Continue with remaining movements
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 27 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 27 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+    
+    chassis.turnToHeading(160, 3000);
+    chassis.waitUntilDone();
+    
+    pros::delay(50);
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 22 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 22 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+    
+    pros::delay(50);
+    
+    chassis.turnToHeading(225, 3000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 23.5 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 23.5 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+
+    pros::delay(1000);
+    
+    // START INTAKE FROM MATCH LOAD
+    indexer_system->startInput();
+
+    chassis.turnToHeading(231, 3000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 35 * sin(pose.theta * M_PI / 180.0),
+                       pose.y - 35 * cos(pose.theta * M_PI / 180.0), 3000);
+    chassis.waitUntilDone();
+
+    pros::delay(50);
+
+    // TOP BACKSCORING - use back/top indexer
+    indexer_system->setTopGoalMode();
+    indexer_system->executeBack();
+    pros::delay(1200);
+    indexer_system->stopAll();
+
+    pros::lcd::print(4, "autonomous finished!");
+
+    autonomous_running = false;
+    printf("Red Right AWP Route Complete\n");
 }
 
 void AutonomousSystem::executeRedRightBonus() {
