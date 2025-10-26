@@ -74,6 +74,13 @@ private:
     bool last_back_execute_button;
     bool last_storage_toggle_button;
 
+    // Display management
+    char last_displayed_line0[17];      ///< Last content displayed on line 0
+    char last_displayed_line1[17];      ///< Last content displayed on line 1  
+    char last_displayed_line2[17];      ///< Last content displayed on line 2
+    uint32_t last_display_update;       ///< Time of last display update
+    bool force_display_update;          ///< Force display update on next cycle
+
 public:
     /**
      * Constructor
@@ -173,6 +180,25 @@ public:
     void update(pros::Controller& controller);
 
     /**
+     * Check if a flow can be interrupted
+     * @return True if current flow can be safely interrupted
+     */
+    bool canInterruptFlow() const;
+
+    /**
+     * Get flow status information
+     * @return String describing current flow status
+     */
+    const char* getFlowStatus() const;
+
+    /**
+     * Update controller display with current status
+     * @param controller Reference to the master controller
+     * @param force_update Force immediate update regardless of timing
+     */
+    void updateControllerDisplay(pros::Controller& controller, bool force_update = false);
+
+    /**
      * Get string representation of current mode for debugging
      * @return "Collection", "Mid Goal", "Low Goal", "Top Goal", or "None"
      */
@@ -241,6 +267,24 @@ private:
      * Stop top indexer motor
      */
     void stopTopIndexer();
+
+    /**
+     * Format mode for compact display
+     * @return Single character representing mode
+     */
+    char getModeChar() const;
+
+    /**
+     * Format direction for compact display  
+     * @return Single character representing direction
+     */
+    char getDirectionChar() const;
+
+    /**
+     * Format status icon for display
+     * @return Status symbol character
+     */
+    char getStatusIcon() const;
 };
 
 #endif // _INDEXER_H_

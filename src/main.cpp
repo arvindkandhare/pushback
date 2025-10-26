@@ -97,16 +97,47 @@ void initialize() {
  * the robot is enabled, this task will exit.
  */
 void disabled() {
-	// Update autonomous selector while disabled
-	static int update_counter = 0;
+	printf("=== DISABLED MODE - AUTONOMOUS SELECTION ===\n");
 	
-	// Update selector every 100ms
-	if (update_counter % 5 == 0) {
-		autonomous_system->update();
+	// Test competition API
+	printf("Competition API status: %s\n", 
+		   pros::competition::is_connected() ? "Connected" : "Not Connected");
+	
+	// If no competition switch, allow selection for a limited time (development mode)
+	if (!pros::competition::is_connected()) {
+		printf("Development Mode: 10 seconds for autonomous selection\n");
+		master->set_text(0, 0, "DEV MODE");
+		master->set_text(1, 0, "10s to select");
+		
+		// Allow 10 seconds for selection in development mode
+		int countdown = 500; // 500 * 20ms = 10 seconds
+		while (countdown > 0) {
+			autonomous_system->getSelector().update();
+			
+			// Update countdown display
+			if (countdown % 25 == 0) { // Update every 0.5 seconds
+				master->print(1, 0, "%ds to select", countdown / 50);
+			}
+			
+			countdown--;
+			pros::delay(20);
+		}
+		
+		master->set_text(0, 0, "SELECTION DONE");
+		master->set_text(1, 0, "Starting...");
+		pros::delay(1000);
+	} else {
+		// Competition mode - continuous loop during disabled period
+		while (pros::competition::is_disabled()) {
+			// Update autonomous selector (UP/DOWN/A buttons work here)
+			autonomous_system->getSelector().update();
+			
+			// Small delay to prevent overwhelming the system
+			pros::delay(20);
+		}
 	}
-	update_counter++;
 	
-	pros::delay(20);
+	printf("=== EXITING DISABLED - STARTING OPERATION ===\n");
 }
 
 /**
@@ -119,36 +150,40 @@ void disabled() {
  * starts.
  */
 void competition_initialize() {
-	// Competition-specific initialization can go here
-	// For example: autonomous routine selector, alliance color selection, etc.
+	printf("=== COMPETITION INITIALIZE ===\n");
+	printf("Connected to Competition Switch/FMS\n");
+	printf("Pushback Robot Ready for Competition\n");
 	
-	printf("Competition Mode - Pushback Robot Ready\n");
-	printf("Use LCD to select autonomous mode\n");
+	// Display instructions on controller
+	master->set_text(0, 0, "COMPETITION MODE");
+	master->set_text(1, 0, "Select Auto Mode");
 	
-	// The autonomous selector will display on LCD
-	// Update continuously until autonomous starts
+	// Competition-specific setup
+	printf("Use controller UP/DOWN/A to select autonomous mode\n");
+	printf("Selection available during DISABLED period\n");
+	
+	printf("=== COMPETITION INITIALIZE COMPLETE ===\n");
 }
 
 /**
  * Runs the user autonomous code. This function will be started in its own task
  * with the default priority and stack size whenever the robot is enabled via
  * the Field Management System or the VEX Competition Switch in the autonomous
- * mode. Alternatively, this function may be called in initialize or opcontrol
- * for non-competition testing purposes.
+ * mode.
  *
  * If the robot is disabled or communications is lost, the autonomous task
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
 void autonomous() {
-	printf("=== AUTONOMOUS STARTED ===\n");
+	printf("=== AUTONOMOUS PERIOD STARTED ===\n");
 	
 	// Display autonomous start on controller
-	master->set_text(0, 0, "AUTON START");
+	master->set_text(0, 0, "AUTON RUNNING");
 	
-	// Display selected mode
+	// Get and display selected mode
 	AutoMode mode = autonomous_system->getSelector().getSelectedMode();
-	printf("Selected autonomous mode: %d\n", static_cast<int>(mode));
+	printf("Executing autonomous mode: %d\n", static_cast<int>(mode));
 	
 	// Show mode on controller
 	master->print(1, 0, "Mode: %d", static_cast<int>(mode));
@@ -157,9 +192,9 @@ void autonomous() {
 	autonomous_system->runAutonomous();
 	
 	// Display completion on controller
-	master->set_text(0, 0, "AUTON DONE");
+	master->set_text(0, 0, "AUTON COMPLETE");
 	
-	printf("=== AUTONOMOUS COMPLETE ===\n");
+	printf("=== AUTONOMOUS PERIOD COMPLETE ===\n");
 }
 
 /**
@@ -176,70 +211,99 @@ void autonomous() {
  * from where it left off.
  */
 void opcontrol() {
-	printf("=== OPCONTROL STARTED ===\n");
+	printf("=== DRIVER CONTROL PERIOD STARTED ===\n");
 	
 	// Display opcontrol start on controller
-	master->set_text(0, 0, "OPCONTROL!");
+	master->set_text(0, 0, "DRIVER CONTROL");
+	master->set_text(1, 0, "Good Luck!");
 	master->rumble("-.-"); // Short-long-short rumble
 	
-	// Global subsystems are already created at file scope
-	
-	
+	// Timer for periodic updates
 	static int counter = 0;
 	static int lcd_update_counter = 0;
 	
-	// Main control loop
-	bool auton_ran = false;
+	// Main driver control loop
 	while (true) {
 		counter++;
 		lcd_update_counter++;
 
-		// TEMP: Hold L1+L2 for 1500ms to run autonomous ONCE for testing (reduces accidental presses)
-		static uint32_t hold_start = 0;
-		bool l1 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L1);
-		bool l2 = master->get_digital(pros::E_CONTROLLER_DIGITAL_L2);
-		if (l1 && l2) {
-			if (hold_start == 0) {
-				hold_start = pros::millis();
-				master->set_text(1, 0, "L1+L2 HOLD...");
+		// Check for autonomous testing (L1+L2 = run selected autonomous)
+		if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1) && 
+			master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+			
+			// Get currently selected mode
+			AutoMode current_mode = autonomous_system->getSelector().getSelectedMode();
+			
+			// Show current selection and confirm
+			master->set_text(0, 0, "TEST CURRENT AUTO");
+			master->print(1, 0, "Mode: %d", static_cast<int>(current_mode));
+			
+			// Wait for buttons to be released
+			while (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1) || 
+				   master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+				pros::delay(20);
 			}
-			else if (!auton_ran && pros::millis() - hold_start >= 1500) {
-				printf("[TEST] L1+L2 held: Running autonomous routine!\n");
-				//pros::lcd::set_text(2, "[TEST] Running Auton");
-				autonomous();
-				auton_ran = true;
-			}
-		} else {
-			hold_start = 0;
-			if (counter % 500 == 0) { // Update every second
-				master->print(1, 0, "Time: %ds", counter / 50);
-			}
+			
+			// Show test execution warning
+			master->set_text(0, 0, "RUNNING AUTO!");
+			master->set_text(1, 0, "Stand Clear!");
+			pros::delay(2000);
+			
+			// Run autonomous
+			autonomous_system->runAutonomous();
+			
+			// Back to driver control
+			master->set_text(0, 0, "DRIVER CONTROL");
+			master->set_text(1, 0, "Auto Test Done");
+			pros::delay(1000);
 		}
 
-		// Print debug info every second (50Hz * 50 = 1 second)
+		// Check for autonomous mode change (R1+R2 = change autonomous mode)
+		if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1) && 
+			master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+			
+			// Allow autonomous mode selection during driver control
+			master->set_text(0, 0, "CHANGE AUTO MODE");
+			master->set_text(1, 0, "Use UP/DOWN/A");
+			
+			while (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1) || 
+				   master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+				autonomous_system->getSelector().update();
+				pros::delay(20);
+			}
+			
+			// Show completion
+			master->set_text(0, 0, "MODE CHANGED");
+			master->set_text(1, 0, "L1+L2 to test");
+			pros::delay(2000);
+		}
+
+		// Print debug info every 10 seconds (50Hz * 500 = 10 seconds)
 		if (counter % 500 == 0) {
-			printf("OPCONTROL LOOP: %d seconds\n", counter / 50);
+			printf("DRIVER CONTROL: %d seconds elapsed\n", counter / 50);
 		}
 
-		// Update LCD less frequently to avoid conflicts (every 2 seconds)
+		// Update controller display every 2 seconds (50Hz * 100 = 2 seconds)
 		if (lcd_update_counter >= 100) {
 			lcd_update_counter = 0;
 
-			// Check controller connection and update LCD
+			// Check controller connection and update display
 			if (master->is_connected()) {
-				master->print(0, 0, "OK: %ds", counter / 50);
+				master->print(0, 0, "Time: %ds", counter / 50);
 			} else {
-//				pros::lcd::set_text(1, "Controller DISCONNECTED");
-				printf("Controller DISCONNECTED!\n");
+				printf("WARNING: Controller DISCONNECTED!\n");
 			}
 		}
 
-		// Update all subsystems - this is where button mappings are handled
+		// Update all robot subsystems - this handles button mappings
 		custom_drivetrain->update(*master);
 		pto_system->update(*master);
 		indexer_system->update(*master);
 		intake_system->update(*master);  // Update intake system
-
+		
+		// Small delay to prevent overwhelming the system
 		pros::delay(20);  // 50Hz loop
 	}
+	
+	printf("=== DRIVER CONTROL PERIOD ENDED ===\n");
 }

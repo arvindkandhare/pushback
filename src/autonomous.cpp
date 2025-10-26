@@ -57,9 +57,9 @@ void AutoSelector::displayOptions() {
     const char* mode_names[] = {
         "DISABLED",
         "Red Left AWP",
-        "Red Left Bonus", 
+        "Red Left BONUS", 
         "Red Right AWP",
-        "Red Right Bonus",
+        "Red Right BONUS",
         "Skills",
         "Test: Drive",
         "Test: Turn",
@@ -121,8 +121,8 @@ void AutoSelector::handleInput() {
             
             // Print mode name for clarity
             const char* mode_names[] = {
-                "DISABLED", "Red Left AWP", "Red Left Bonus", 
-                "Red Right AWP", "Red Right Bonus", "Skills",
+                "DISABLED", "Red Left AWP (SOLO AWP)", "Red Left BONUS (AWP+Points)", 
+                "Red Right AWP (Original)", "Red Right BONUS (AWP+Points)", "Skills",
                 "Test: Drive", "Test: Turn", "Test: Navigation", "Test: Odometry"
             };
             printf("Mode: %s\n", mode_names[selector_position]);
@@ -346,28 +346,28 @@ void AutonomousSystem::printPosition() {
 // =============================================================================
 
 void AutonomousSystem::executeRedLeftAWP() {
-    printf("Executing Red Left AWP Route\n");
+    printf("Executing Red Left AWP Route (Mirrored from proven Red Right route)\n");
     autonomous_running = true;
 
-    // Set starting pose
-    chassis.setPose(0, 0, 60);
+    // Set starting pose for LEFT side (mirror of Red Right's 60°)
+    chassis.setPose(0, 0, 120);  // 120° = northwest direction (mirror of 60°)
 
     // START INTAKE
     indexer_system->startInput();
 
-    // Move forward ~35.5"
-    chassis.moveToPoint(35.5 * sin(60 * M_PI / 180.0), 35.5 * cos(60 * M_PI / 180.0), 5000);
+    // Move forward ~35.5" at mirrored angle (120° instead of 60°)
+    chassis.moveToPoint(35.5 * sin(120 * M_PI / 180.0), 35.5 * cos(120 * M_PI / 180.0), 5000);
     chassis.waitUntilDone();
     
     pros::delay(100);
     
-    // Turn to 180°
+    // Turn to 180° (same as Red Right - facing toward red alliance)
     chassis.turnToHeading(180, 3000);
     chassis.waitUntilDone();
     
     pros::delay(100);
 
-    // Back up ~12"
+    // Back up ~12" (same positioning logic)
     auto pose = chassis.getPose();
     chassis.moveToPoint(pose.x - 12 * sin(180 * M_PI / 180.0), 
                        pose.y - 12 * cos(180 * M_PI / 180.0), 3000);
@@ -381,13 +381,14 @@ void AutonomousSystem::executeRedLeftAWP() {
 
     pros::delay(50);
     
-    // Continue with remaining movements
+    // Continue with mirrored navigation pattern
     pose = chassis.getPose();
     chassis.moveToPoint(pose.x + 27 * sin(pose.theta * M_PI / 180.0),
                        pose.y + 27 * cos(pose.theta * M_PI / 180.0), 3000);
     chassis.waitUntilDone();
     
-    chassis.turnToHeading(160, 3000);
+    // Mirror of 160° → 200° (opposite side approach)
+    chassis.turnToHeading(200, 3000);
     chassis.waitUntilDone();
     
     pros::delay(50);
@@ -399,7 +400,8 @@ void AutonomousSystem::executeRedLeftAWP() {
     
     pros::delay(50);
     
-    chassis.turnToHeading(225, 3000);
+    // Mirror of 225° → 315° (approach match load from left side)
+    chassis.turnToHeading(315, 3000);
     chassis.waitUntilDone();
     
     pose = chassis.getPose();
@@ -409,10 +411,11 @@ void AutonomousSystem::executeRedLeftAWP() {
 
     pros::delay(1000);
     
-    // START INTAKE FROM MATCH LOAD
+    // START INTAKE FROM MATCH LOAD (left side)
     indexer_system->startInput();
 
-    chassis.turnToHeading(231, 3000);
+    // Mirror of 231° → 309° (approach from left match load zone)
+    chassis.turnToHeading(309, 3000);
     chassis.waitUntilDone();
     
     pose = chassis.getPose();
@@ -422,35 +425,118 @@ void AutonomousSystem::executeRedLeftAWP() {
 
     pros::delay(50);
 
-    // TOP BACKSCORING - use back/top indexer
+    // TOP BACKSCORING - use back/top indexer (same as Red Right)
     indexer_system->setTopGoalMode();
     indexer_system->executeBack();
     pros::delay(1200);
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "autonomous finished!");
+    pros::lcd::print(4, "Red Left AWP finished!");
 
     autonomous_running = false;
     printf("Red Left AWP Route Complete\n");
 }
 
 void AutonomousSystem::executeRedLeftBonus() {
-    printf("Executing Red Left Bonus Route\n");
-    // TODO: Implement aggressive bonus route
-    executeRedLeftAWP(); // Fallback to AWP route for now
+    printf("Executing Red Left BONUS Route (AWP + Maximum Points - Mirrored)\n");
+    autonomous_running = true;
+
+    // Set starting pose for LEFT side (mirror of Red Right's 60°)
+    chassis.setPose(0, 0, 120);  // 120° = northwest direction
+
+    // START INTAKE immediately for maximum block collection
+    indexer_system->startInput();
+
+    printf("BONUS Phase 1: Aggressive AWP completion\n");
+    
+    // Use the proven working path but mirrored for left side
+    chassis.moveToPoint(35.5 * sin(120 * M_PI / 180.0), 35.5 * cos(120 * M_PI / 180.0), 4000); // Faster, mirrored
+    chassis.waitUntilDone();
+    
+    // Quick turn and score
+    chassis.turnToHeading(180, 2500); // Faster turn (same as Red Right)
+    chassis.waitUntilDone();
+    
+    auto pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 12 * sin(180 * M_PI / 180.0), 
+                       pose.y - 12 * cos(180 * M_PI / 180.0), 2500); // Faster movement
+    chassis.waitUntilDone();
+
+    // FAST AWP SCORING
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(600); // Shorter delay for speed
+    indexer_system->stopAll();
+
+    printf("BONUS Phase 2: Maximum point collection\n");
+    
+    // Continue with proven path but collect more blocks and mirrored angles
+    indexer_system->startInput(); // Keep collecting throughout
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 27 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 27 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+    
+    // Mirror of 160° → 200° (left side approach)
+    chassis.turnToHeading(200, 2000); // Faster
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 22 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 22 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+    
+    // BONUS: Additional scoring opportunity
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(500); // Quick score
+    indexer_system->stopAll();
+    
+    // Continue to match load zone faster (mirror of 225° → 315°)
+    chassis.turnToHeading(315, 2000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 23.5 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 23.5 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+
+    // Aggressive intake from match load (left side)
+    indexer_system->startInput();
+    pros::delay(800); // Slightly longer to grab more blocks
+
+    // Mirror of 231° → 309° (left match load approach)
+    chassis.turnToHeading(309, 2000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 35 * sin(pose.theta * M_PI / 180.0),
+                       pose.y - 35 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+
+    // FINAL HIGH-VALUE SCORING
+    indexer_system->setTopGoalMode();
+    indexer_system->executeBack();
+    pros::delay(1000); // Ensure all blocks are scored
+    indexer_system->stopAll();
+
+    pros::lcd::print(4, "Left BONUS Complete!");
+    autonomous_running = false;
+    printf("Red Left BONUS Route Complete - Maximum Points + AWP achieved\n");
 }
 
 void AutonomousSystem::executeRedRightAWP() {
-    printf("Executing Red Right AWP Route (clean LemLib version)\n");
+    printf("Executing Red Right AWP Route (Original working route moved here)\n");
     autonomous_running = true;
 
-    // Set starting pose (matches working code)
+    // Set starting pose for RIGHT side (this was the original working code)
     chassis.setPose(0, 0, 60);
 
     // START INTAKE
     indexer_system->startInput();
 
-    // Move forward ~35.5"
+    // Move forward ~35.5" (original working movement)
     chassis.moveToPoint(35.5 * sin(60 * M_PI / 180.0), 35.5 * cos(60 * M_PI / 180.0), 5000);
     chassis.waitUntilDone();
     
@@ -523,26 +609,105 @@ void AutonomousSystem::executeRedRightAWP() {
     pros::delay(1200);
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "autonomous finished!");
+    pros::lcd::print(4, "Red Right AWP finished!");
 
     autonomous_running = false;
     printf("Red Right AWP Route Complete\n");
 }
 
 void AutonomousSystem::executeRedRightBonus() {
-    printf("Executing Red Right Bonus Route\n");
-    // TODO: Implement Red Right bonus route
-    executeRedRightAWP(); // Fallback to AWP route for now
+    printf("Executing Red Right BONUS Route (AWP + Maximum Points)\n");
+    autonomous_running = true;
+
+    // Set starting pose for RIGHT side
+    chassis.setPose(0, 0, 60);
+
+    // START INTAKE immediately for maximum block collection
+    indexer_system->startInput();
+
+    printf("BONUS Phase 1: Aggressive AWP completion\n");
+    
+    // Use the proven working path but optimize for speed and points
+    chassis.moveToPoint(35.5 * sin(60 * M_PI / 180.0), 35.5 * cos(60 * M_PI / 180.0), 4000); // Faster
+    chassis.waitUntilDone();
+    
+    // Quick turn and score
+    chassis.turnToHeading(180, 2500); // Faster turn
+    chassis.waitUntilDone();
+    
+    auto pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 12 * sin(180 * M_PI / 180.0), 
+                       pose.y - 12 * cos(180 * M_PI / 180.0), 2500); // Faster movement
+    chassis.waitUntilDone();
+
+    // FAST AWP SCORING
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(600); // Shorter delay for speed
+    indexer_system->stopAll();
+
+    printf("BONUS Phase 2: Maximum point collection\n");
+    
+    // Continue with proven path but collect more blocks
+    indexer_system->startInput(); // Keep collecting throughout
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 27 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 27 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+    
+    chassis.turnToHeading(160, 2000); // Faster
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 22 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 22 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+    
+    // BONUS: Additional scoring opportunity
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(500); // Quick score
+    indexer_system->stopAll();
+    
+    // Continue to match load zone faster
+    chassis.turnToHeading(225, 2000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x + 23.5 * sin(pose.theta * M_PI / 180.0),
+                       pose.y + 23.5 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+
+    // Aggressive intake from match load
+    indexer_system->startInput();
+    pros::delay(800); // Slightly longer to grab more blocks
+
+    chassis.turnToHeading(231, 2000);
+    chassis.waitUntilDone();
+    
+    pose = chassis.getPose();
+    chassis.moveToPoint(pose.x - 35 * sin(pose.theta * M_PI / 180.0),
+                       pose.y - 35 * cos(pose.theta * M_PI / 180.0), 2500);
+    chassis.waitUntilDone();
+
+    // FINAL HIGH-VALUE SCORING
+    indexer_system->setTopGoalMode();
+    indexer_system->executeBack();
+    pros::delay(1000); // Ensure all blocks are scored
+    indexer_system->stopAll();
+
+    pros::lcd::print(4, "BONUS Route Complete!");
+    autonomous_running = false;
+    printf("Red Right BONUS Route Complete - Maximum Points + AWP achieved\n");
 }
 
 void AutonomousSystem::executeSkillsRoutine() {
-    printf("Executing Skills Routine\n");
-    // TODO: Implement programming skills routine
+    printf("Executing Skills Routine - Running Red Right AWP for testing\n");
     autonomous_running = true;
     
-    // Skills routine can be longer and more complex
-    printf("Skills routine placeholder\n");
-    pros::delay(5000);
+    // For testing purposes, run the Red Right AWP route in Skills mode
+    executeRedRightAWP();
     
     autonomous_running = false;
     printf("Skills Routine Complete\n");

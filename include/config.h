@@ -150,17 +150,17 @@
 #define INPUT_MOTOR_REVERSE_SPEED   -120   // Reverse speed for low goal scoring
 
 // Direct indexer motor speeds for each mode (positive/negative for direction control)
-// Front scoring speeds
-#define LEFT_INDEXER_FRONT_COLLECTION_SPEED   -100   // Front collection mode
-#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED     100   // Front mid goal (opposite direction)
-#define LEFT_INDEXER_FRONT_IMMEDIATE_SPEED     -120   // Front immediate mode
-#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED      -150   // Front top goal mode
+// Front scoring speeds (reduced to 50% to prevent overloading)
+#define LEFT_INDEXER_FRONT_COLLECTION_SPEED   -50    // Front collection mode (was -100)
+#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED     50     // Front mid goal (opposite direction) (was 100)
+#define LEFT_INDEXER_FRONT_IMMEDIATE_SPEED     -60    // Front immediate mode (was -120)
+#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED      -75    // Front top goal mode (was -150)
 
-// Back scoring speeds (when left indexer helps back scoring)
-#define LEFT_INDEXER_BACK_COLLECTION_SPEED     120   // Back collection helper
-#define LEFT_INDEXER_BACK_MID_GOAL_SPEED      -100   // Back mid goal helper
-#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED      120   // Back immediate helper
-#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED       -100   // Back top goal helper
+// Back scoring speeds (when left indexer helps back scoring - reduced to 50%)
+#define LEFT_INDEXER_BACK_COLLECTION_SPEED     60     // Back collection helper (was 120)
+#define LEFT_INDEXER_BACK_MID_GOAL_SPEED      -50     // Back mid goal helper (was -100)
+#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED      60     // Back immediate helper (was 120)
+#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED       -50    // Back top goal helper (was -100)
 
 // Right indexer speeds (back scoring main motor)
 #define RIGHT_INDEXER_COLLECTION_SPEED         -120   // Back collection mode
@@ -174,7 +174,7 @@
 
 // Storage mode speeds - for moving balls from top storage back toward intake
 #define TOP_INDEXER_STORAGE_SPEED             -120   // Top indexer moves balls back from storage
-#define FRONT_INDEXER_STORAGE_SPEED           120    // Front indexer moves balls back from storage
+#define FRONT_INDEXER_STORAGE_SPEED           60     // Front indexer moves balls back from storage (was 120)
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION
