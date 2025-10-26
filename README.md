@@ -36,6 +36,11 @@ This document provides a complete reference for all controller button mappings a
 |--------|----------|-------------|
 | **DOWN** | Intake Toggle | **TOGGLE**: Press to extend/retract intake mechanism for ball collection |
 
+#### 🎯 Front Flap Controls
+| Button | Function | Description |
+|--------|----------|-------------|
+| **RIGHT** | Front Flap Toggle | **TOGGLE**: Press to open/close front scoring flap (independent of scoring modes) |
+
 #### ⚽ New Two-Step Scoring System
 
 **Step 1: Mode Selection**
@@ -156,6 +161,12 @@ This document provides a complete reference for all controller button mappings a
 | Deploy Intake | DOWN | Extend intake mechanism for ball collection |
 | Store Intake | DOWN (again) | Retract intake mechanism to stored position |
 
+### Front Flap Operation:
+| Function | Button | Result |
+|----------|--------|---------|
+| Deploy Front Flap | RIGHT | Open front flap for scoring (independent control) |
+| Close Front Flap | RIGHT (again) | Close front flap to hold balls |
+
 ---
 
 ## 🔧 Testing & Diagnostics
@@ -255,6 +266,9 @@ All button mappings are defined in `include/config.h` and can be easily modified
 
 // Intake mechanism control - DOWN button
 #define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (extend/retract)
+
+// Front flap direct control - RIGHT button
+#define FRONT_FLAP_TOGGLE_BUTTON  pros::E_CONTROLLER_DIGITAL_RIGHT // Toggle front flap open/closed
 ```
 
 ### Pneumatic Configuration:

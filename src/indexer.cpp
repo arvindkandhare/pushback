@@ -21,6 +21,7 @@ IndexerSystem::IndexerSystem(PTO* pto)
       input_start_time(0),
       input_motor_active(false),
       score_from_top_storage(false),
+      front_flap_open(false),  // Start with flap closed (default state)
       last_collection_button(false),
       last_mid_goal_button(false),
       last_low_goal_button(false),
@@ -28,6 +29,7 @@ IndexerSystem::IndexerSystem(PTO* pto)
       last_front_execute_button(false),
       last_back_execute_button(false),
       last_storage_toggle_button(false),
+      last_front_flap_toggle_button(false),
       last_display_update(0),
       force_display_update(true) {
     
@@ -307,13 +309,26 @@ void IndexerSystem::executeBack() {
 
 void IndexerSystem::openFrontFlap() {
     front_flap.set_value(FRONT_FLAP_OPEN);
+    front_flap_open = true;
     printf("DEBUG: Front flap OPENED for scoring\n");
 }
 
 void IndexerSystem::closeFrontFlap() {
     front_flap.set_value(FRONT_FLAP_CLOSED);
+    front_flap_open = false;
     printf("DEBUG: Front flap CLOSED to hold balls\n");
     // LCD call removed to prevent rendering conflicts
+}
+
+void IndexerSystem::toggleFrontFlap() {
+    // Check current tracked state and toggle
+    if (front_flap_open) {
+        closeFrontFlap();
+        printf("DEBUG: Manual front flap toggle - CLOSED\n");
+    } else {
+        openFrontFlap();
+        printf("DEBUG: Manual front flap toggle - OPENED\n");
+    }
 }
 
 void IndexerSystem::startInput() {
@@ -423,15 +438,16 @@ void IndexerSystem::update(pros::Controller& controller) {
     bool current_front_execute_button = controller.get_digital(FRONT_EXECUTE_BUTTON);   // R2
     bool current_back_execute_button = controller.get_digital(BACK_EXECUTE_BUTTON);     // R1
     bool current_storage_toggle_button = controller.get_digital(STORAGE_TOGGLE_BUTTON); // LEFT
+    bool current_front_flap_toggle_button = controller.get_digital(FRONT_FLAP_TOGGLE_BUTTON); // RIGHT
     
     // Debug: Print button states when any button is pressed
     if (current_collection_button || current_mid_goal_button || current_low_goal_button || 
         current_top_goal_button || current_front_execute_button || current_back_execute_button ||
-        current_storage_toggle_button) {
-        printf("DEBUG: Buttons - Y:%d A:%d B:%d X:%d R2:%d R1:%d LEFT:%d\n", 
+        current_storage_toggle_button || current_front_flap_toggle_button) {
+        printf("DEBUG: Buttons - Y:%d A:%d B:%d X:%d R2:%d R1:%d LEFT:%d RIGHT:%d\n", 
                current_collection_button, current_mid_goal_button, current_low_goal_button,
                current_top_goal_button, current_front_execute_button, current_back_execute_button,
-               current_storage_toggle_button);
+               current_storage_toggle_button, current_front_flap_toggle_button);
     }
     
     // Handle mode selection (rising edge detection)
@@ -467,6 +483,14 @@ void IndexerSystem::update(pros::Controller& controller) {
     if (current_storage_toggle_button && !last_storage_toggle_button) {
         printf("DEBUG: LEFT (STORAGE TOGGLE) button pressed!\n");
         toggleStorageMode();
+        force_display_update = true;  // Force immediate display update
+    }
+    
+    // Handle front flap direct toggle (rising edge detection)
+    if (current_front_flap_toggle_button && !last_front_flap_toggle_button) {
+        printf("DEBUG: RIGHT (FRONT FLAP TOGGLE) button pressed!\n");
+        toggleFrontFlap();
+        controller.rumble("..."); // Triple rumble pattern for front flap
         force_display_update = true;  // Force immediate display update
     }
     
@@ -590,6 +614,7 @@ void IndexerSystem::update(pros::Controller& controller) {
     last_front_execute_button = current_front_execute_button;
     last_back_execute_button = current_back_execute_button;
     last_storage_toggle_button = current_storage_toggle_button;
+    last_front_flap_toggle_button = current_front_flap_toggle_button;
     
     // Update controller display with current status
     updateControllerDisplay(controller, force_display_update);

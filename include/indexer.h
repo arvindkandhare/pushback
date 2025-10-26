@@ -64,6 +64,7 @@ private:
     uint32_t input_start_time;      ///< Time when input motor started
     bool input_motor_active;        ///< True when input motor is running
     bool score_from_top_storage;    ///< True when scoring from top storage is enabled
+    bool front_flap_open;           ///< True when front flap is open (manual tracking)
     
     // Button state tracking (for edge detection)
     bool last_collection_button;
@@ -73,6 +74,7 @@ private:
     bool last_front_execute_button;
     bool last_back_execute_button;
     bool last_storage_toggle_button;
+    bool last_front_flap_toggle_button;  ///< For direct front flap control
 
     // Display management
     char last_displayed_line0[17];      ///< Last content displayed on line 0
@@ -127,6 +129,11 @@ public:
      * Close front flap to hold balls against it
      */
     void closeFrontFlap();
+
+    /**
+     * Toggle front flap between open and closed (direct control)
+     */
+    void toggleFrontFlap();
 
     /**
      * Start input motor for ball intake

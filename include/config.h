@@ -83,6 +83,9 @@
 // Storage scoring control - LEFT button
 #define STORAGE_TOGGLE_BUTTON     pros::E_CONTROLLER_DIGITAL_LEFT // Toggle score from top storage mode
 
+// Front flap direct control - RIGHT button
+#define FRONT_FLAP_TOGGLE_BUTTON  pros::E_CONTROLLER_DIGITAL_RIGHT // Toggle front flap open/closed
+
 // =============================================================================
 // MOTOR CONFIGURATION CONSTANTS
 // =============================================================================

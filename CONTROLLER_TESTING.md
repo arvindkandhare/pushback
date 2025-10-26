@@ -183,6 +183,34 @@ Check console output
 
 ---
 
+## 🎮 Driver Control Testing
+
+### **Testing Pneumatic Systems:**
+
+**PTO System Testing:**
+1. Enter driver control mode
+2. Press **UP** button - robot should switch between drive/scorer modes
+3. Controller rumbles with "." pattern on successful toggle
+4. Watch for PTO status on controller display
+
+**Intake Testing:**
+1. Press **DOWN** button - intake should extend/retract
+2. Controller rumbles with ".." pattern on successful toggle
+3. Listen for pneumatic "hiss" sound
+
+**Front Flap Testing:**
+1. Press **RIGHT** button - front flap should open/close
+2. Controller rumbles with "..." pattern (triple rumble)
+3. Visually confirm flap movement
+4. Test independently - works without scoring mode selection
+
+**Testing Individual Indexers:**
+1. **L1** button: Cycles left indexer (Forward → Reverse → Stop)
+2. **L2** button: Cycles right indexer (Forward → Reverse → Stop)
+3. Each press advances to next state with rumble feedback
+
+---
+
 ## ✅ Quick Start Checklist:
 
 - [ ] Power on robot (stationary)
