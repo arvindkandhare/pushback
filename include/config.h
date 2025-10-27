@@ -95,15 +95,20 @@
 #define BACK_EXECUTE_BUTTON       pros::E_CONTROLLER_DIGITAL_R1  // Execute selected mode - back
 #define FRONT_EXECUTE_BUTTON      pros::E_CONTROLLER_DIGITAL_R2  // Execute selected mode - front
 
-// Additional controls for testing individual indexers
-#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_L1   // Test left indexer
-#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_L2   // Test right indexer
+// Additional controls for testing individual indexers (NOTE: L1/L2 now used for front loader fine adjustment)
+#define LEFT_INDEXER_TEST_BUTTON  pros::E_CONTROLLER_DIGITAL_L1   // Test left indexer (OVERRIDDEN by front loader)
+#define RIGHT_INDEXER_TEST_BUTTON pros::E_CONTROLLER_DIGITAL_L2   // Test right indexer (OVERRIDDEN by front loader)
 
 // PTO control (if still needed) - moved to UP button
 #define PTO_TOGGLE_BUTTON         pros::E_CONTROLLER_DIGITAL_UP   // PTO toggle (optional)
 
 // Intake mechanism control - DOWN button
-#define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (extend/retract)
+#define INTAKE_TOGGLE_BUTTON      pros::E_CONTROLLER_DIGITAL_DOWN // Intake toggle (deploy/retract to preset positions)
+
+// Front loader fine adjustment controls (overrides indexer testing)
+// L1: Adjust front loader position +1 degree
+// L2: Adjust front loader position -1 degree
+// DOWN: Reset to original deployed/retracted position (toggles between presets)
 
 // Storage scoring control - LEFT button
 #define STORAGE_TOGGLE_BUTTON     pros::E_CONTROLLER_DIGITAL_LEFT // Toggle score from top storage mode

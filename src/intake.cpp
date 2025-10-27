@@ -14,6 +14,8 @@ Intake::Intake()
       front_loader_deployed(FRONT_LOADER_DEFAULT_STATE),
       front_loader_target_position(FRONT_LOADER_RETRACTED_POSITION),
       last_button_state(false),
+      last_l1_button_state(false),
+      last_l2_button_state(false),
       sensor_zero_value(0.0) {
     
     // Configure motor
@@ -171,24 +173,54 @@ bool Intake::isAtTarget() const {
 }
 
 void Intake::update(pros::Controller& controller) {
-    // Get current button state
+    // Get current button states
     bool current_button_state = controller.get_digital(INTAKE_TOGGLE_BUTTON);
+    bool current_l1_button_state = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1);
+    bool current_l2_button_state = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2);
     
-    // Check for button press (rising edge detection)
+    // Check for toggle button press (rising edge detection) - resets to original position
     if (current_button_state && !last_button_state) {
-        printf("Front Loader: Button pressed! Current state: %s\n", getCurrentStateString());
-        printf("  Before toggle - Position: %.1f° (motor: %.1f°)\n", getPosition(), getMotorPosition());
+        printf("Front Loader: Toggle button pressed! Resetting to original position\n");
+        printf("  Before reset - Position: %.1f° (motor: %.1f°)\n", getPosition(), getMotorPosition());
         
-        toggle();
+        resetToOriginal();
         
-        printf("  After toggle - Target: %.1f°, State: %s\n", front_loader_target_position, getCurrentStateString());
+        printf("  After reset - Target: %.1f°, State: %s\n", front_loader_target_position, getCurrentStateString());
         
         // Provide haptic feedback - different pattern from PTO
         controller.rumble("..");
     }
     
-    // Update last button state for next iteration
+    // Check for L1 button press (rising edge detection) - adjust +1 degree
+    if (current_l1_button_state && !last_l1_button_state) {
+        printf("Front Loader: L1 pressed! Adjusting +1 degree\n");
+        printf("  Before adjustment - Position: %.1f°, Target: %.1f°\n", getPosition(), front_loader_target_position);
+        
+        adjustPosition(1.0);
+        
+        printf("  After adjustment - New Target: %.1f°\n", front_loader_target_position);
+        
+        // Provide brief haptic feedback
+        controller.rumble(".");
+    }
+    
+    // Check for L2 button press (rising edge detection) - adjust -1 degree
+    if (current_l2_button_state && !last_l2_button_state) {
+        printf("Front Loader: L2 pressed! Adjusting -1 degree\n");
+        printf("  Before adjustment - Position: %.1f°, Target: %.1f°\n", getPosition(), front_loader_target_position);
+        
+        adjustPosition(-1.0);
+        
+        printf("  After adjustment - New Target: %.1f°\n", front_loader_target_position);
+        
+        // Provide brief haptic feedback
+        controller.rumble(".");
+    }
+    
+    // Update last button states for next iteration
     last_button_state = current_button_state;
+    last_l1_button_state = current_l1_button_state;
+    last_l2_button_state = current_l2_button_state;
     
     // Continuous position monitoring (every 100ms to avoid spam)
     static uint32_t last_debug_time = 0;
@@ -332,4 +364,33 @@ double Intake::loaderDegreesToMotorDegrees(double loader_degrees) const {
 double Intake::motorDegreesToLoaderDegrees(double motor_degrees) const {
     // Loader rotates 1/12 times for every motor rotation
     return motor_degrees / FRONT_LOADER_GEAR_RATIO;
+}
+
+void Intake::adjustPosition(double degrees) {
+    // Get current target position and adjust it
+    double new_target = front_loader_target_position + degrees;
+    
+    // Safety check - limit to reasonable range
+    if (new_target < -180 || new_target > 180) {
+        printf("Front Loader: Adjustment blocked - new position %.1f° would be out of safe range (-180° to 180°)\n", new_target);
+        return;
+    }
+    
+    // Apply the adjustment
+    setPosition(new_target);
+    
+    printf("Front Loader: Position adjusted by %.1f° (from %.1f° to %.1f°)\n", 
+           degrees, front_loader_target_position - degrees, front_loader_target_position);
+}
+
+void Intake::resetToOriginal() {
+    // Toggle between the two preset positions (like the original toggle behavior)
+    // This restores the original functionality while maintaining adjustability with L1/L2
+    if (front_loader_deployed == FRONT_LOADER_DEPLOYED) {
+        retract();  // Switch to retracted state
+    } else {
+        deploy();   // Switch to deployed state
+    }
+    
+    printf("Front Loader: Reset to original position - %s\n", getCurrentStateString());
 }

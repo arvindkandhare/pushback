@@ -33,6 +33,8 @@ private:
     bool front_loader_deployed;                 ///< Current state (true = deployed, false = retracted)
     double front_loader_target_position;        ///< Target position in loader degrees (not motor degrees)
     bool last_button_state;                     ///< Last state of toggle button (for edge detection)
+    bool last_l1_button_state;                  ///< Last state of L1 button (for edge detection)
+    bool last_l2_button_state;                  ///< Last state of L2 button (for edge detection)
     double sensor_zero_value;                   ///< Calibrated zero position sensor reading
 
 public:
@@ -94,6 +96,18 @@ public:
      * @param controller Reference to the master controller
      */
     void update(pros::Controller& controller);
+
+    /**
+     * Adjust position by a small increment (fine tuning)
+     * @param degrees Degrees to adjust (+/- values)
+     */
+    void adjustPosition(double degrees);
+
+    /**
+     * Reset to the original deployed/retracted position based on current state
+     * This toggles between deployed and retracted positions (original behavior)
+     */
+    void resetToOriginal();
 
     /**
      * Get string representation of current state for debugging
