@@ -28,6 +28,7 @@
 // Indexer and intake system motors
 #define INPUT_MOTOR_PORT        1   // 11W motor at bottom for ball intake
 #define TOP_INDEXER_PORT        8   // Top indexer motor (shared: front top OR back top)
+#define FRONT_LOADER_MOTOR_PORT 7   // Front match loader motor
 
 // Odometry and navigation sensors
 #define VERTICAL_ENCODER_PORT   9   // Vertical tracking wheel encoder
@@ -35,7 +36,13 @@
 #define GYRO_PORT              13   // Inertial sensor for heading
 
 // =============================================================================
-// PNEUMATIC PORTS - ADI (Analog/Digital Interface)
+// ADI PORTS - Sensors and Legacy Devices
+// =============================================================================
+
+// Front match loader encoder (VEX shaft encoder)
+#define FRONT_LOADER_ENCODER_TOP    'E'  // ADI port E 
+#define FRONT_LOADER_ENCODER_BOTTOM 'E'  // ADI port E (same port for shaft encoder)
+
 // =============================================================================
 
 // PTO (Power Take-Off) pneumatic cylinders
@@ -47,9 +54,27 @@
 // Controls flap that holds balls for front scoring
 #define FRONT_FLAP_PNEUMATIC    'B'  // ADI port B (moved from C)
 
-// Intake mechanism pneumatic
-// Controls intake extension/retraction for collecting balls from tubes
-#define INTAKE_PNEUMATIC        'D'  // ADI port D
+// =============================================================================
+// FRONT MATCH LOADER CONFIGURATION  
+// =============================================================================
+
+// Front loader positions (in degrees - measured at the loader arm, not motor)
+#define FRONT_LOADER_RETRACTED_POSITION    0     // Retracted/stored position (vertical)
+#define FRONT_LOADER_DEPLOYED_POSITION    -66    // Deployed position (close to observed physical limit)
+
+// Front loader motor configuration
+#define FRONT_LOADER_MOTOR_SPEED          80     // Motor speed in RPM (reduced to prevent stalling)
+#define FRONT_LOADER_POSITION_TOLERANCE   3      // Position tolerance in degrees (increased)
+#define FRONT_LOADER_GEAR_RATIO          12.0    // Gear ratio (72 teeth / 6 teeth = 12:1)
+#define FRONT_LOADER_REVERSE_MOTOR       true    // Set to true if motor moves in wrong direction
+
+// Position feedback method
+#define USE_MOTOR_ENCODER_ONLY           true    // true = motor encoder, false = potentiometer
+
+// Potentiometer configuration
+#define POTENTIOMETER_RANGE_DEGREES      270.0   // VEX potentiometer range (270 degrees)
+#define POTENTIOMETER_MAX_VALUE          4095    // 12-bit ADC max value
+#define POTENTIOMETER_MOUNTED_ON_MOTOR   true    // true = on motor shaft, false = on loader arm
 
 // =============================================================================
 // CONTROLLER CONFIGURATION
@@ -119,15 +144,15 @@
 #define FRONT_FLAP_DEFAULT_STATE FRONT_FLAP_CLOSED
 
 // =============================================================================
-// INTAKE MECHANISM CONFIGURATION
+// INTAKE MECHANISM CONFIGURATION (FRONT MATCH LOADER)
 // =============================================================================
 
-// Intake pneumatic states
-#define INTAKE_EXTENDED   true   // Extended = intake mechanism deployed for ball collection
-#define INTAKE_RETRACTED  false  // Retracted = intake mechanism stored (default position)
+// Front loader states - now using motor positions instead of pneumatics
+#define FRONT_LOADER_DEPLOYED   true   // Deployed = loader extended for ball collection  
+#define FRONT_LOADER_RETRACTED  false  // Retracted = loader stored (default position)
 
-// Default intake state on robot startup
-#define INTAKE_DEFAULT_STATE INTAKE_RETRACTED
+// Default front loader state on robot startup
+#define FRONT_LOADER_DEFAULT_STATE FRONT_LOADER_RETRACTED
 
 // =============================================================================
 // DRIVE CONFIGURATION
