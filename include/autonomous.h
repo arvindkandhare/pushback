@@ -96,6 +96,9 @@ private:
     double getDistanceToTarget();
     double getAngleToTarget();
     double getHeadingError(double target_heading);
+
+    // Standard scoring sequences
+    void executePostScoringBump(double bump_distance = 8.0, double retreat_distance = 10.0);
     
 public:
     /**
@@ -133,10 +136,18 @@ public:
     /**
      * Autonomous route functions
      */
-    void executeRedLeftAWP();
+    // Bonus Point Routes (Primary Strategy)
     void executeRedLeftBonus();
-    void executeRedRightAWP();
     void executeRedRightBonus();
+    void executeBlueLeftBonus();
+    void executeBlueRightBonus();
+    
+    // AWP Routes (Backup Strategy)
+    void executeRedLeftAWP();
+    void executeRedRightAWP();
+    void executeBlueLeftAWP();
+    void executeBlueRightAWP();
+    
     void executeSkillsRoutine();
     
     /**

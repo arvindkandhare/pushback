@@ -115,8 +115,8 @@
 // MOTOR CONFIGURATION CONSTANTS
 // =============================================================================
 
-// Motor gearset (11W motors use 18:1 green cartridge for good balance of speed/torque)
-#define DRIVETRAIN_GEARSET      pros::v5::MotorGears::green
+// Motor gearset (11W motors use 6:1 blue cartridge for speed - matches working config)
+#define DRIVETRAIN_GEARSET      pros::v5::MotorGears::blue
 
 // Motor brake mode (coast allows for easier pushing, brake provides better control)
 #define DRIVETRAIN_BRAKE_MODE   pros::v5::MotorBrake::coast
@@ -216,13 +216,35 @@
 #define ROBOT_WIDTH             15.0   // Distance between left/right wheels (inches)
 #define ROBOT_LENGTH            15.0   // Robot length (inches)
 
-// Movement control constants
-#define DRIVE_KP                0.8    // Proportional gain for driving
-#define DRIVE_KI                0.01   // Integral gain for driving
-#define DRIVE_KD                0.1    // Derivative gain for driving
-#define TURN_KP                 1.2    // Proportional gain for turning
-#define TURN_KI                 0.02   // Integral gain for turning
-#define TURN_KD                 0.15   // Derivative gain for turning
+// Movement control constants - WORKING VALUES from working_code.txt
+// Linear PID (for driving to points) - PROVEN WORKING
+#define DRIVE_KP                20.0   // Proportional gain for driving (was 0.8)
+#define DRIVE_KI                0.0    // Integral gain for driving (was 0.01)  
+#define DRIVE_KD                110.0  // Derivative gain for driving (was 0.1)
+#define DRIVE_WINDUP            0      // Anti windup
+#define DRIVE_SMALL_ERROR       0.25   // Small error range (inches)
+#define DRIVE_SMALL_TIMEOUT     10     // Small error timeout (ms)
+#define DRIVE_LARGE_ERROR       0.5    // Large error range (inches)
+#define DRIVE_LARGE_TIMEOUT     50     // Large error timeout (ms)
+#define DRIVE_SLEW              1      // Maximum acceleration
+
+// Angular PID (for turning) - PROVEN WORKING
+#define TURN_KP                 2.0    // Proportional gain for turning (was 1.2)
+#define TURN_KI                 0.0    // Integral gain for turning (was 0.02)
+#define TURN_KD                 4.0    // Derivative gain for turning (was 0.15)
+#define TURN_WINDUP             0      // Anti windup
+#define TURN_SMALL_ERROR        0.2    // Small error range (degrees)
+#define TURN_SMALL_TIMEOUT      10     // Small error timeout (ms)  
+#define TURN_LARGE_ERROR        0.75   // Large error range (degrees)
+#define TURN_LARGE_TIMEOUT      50     // Large error timeout (ms)
+#define TURN_SLEW               0      // Maximum acceleration
+
+// Separate turn controller for larger turns - PROVEN WORKING
+#define TURN_BIG_KP             4.0    // Proportional gain for big turns
+#define TURN_BIG_KI             0.0    // Integral gain for big turns
+#define TURN_BIG_KD             9.0    // Derivative gain for big turns
+#define TURN_BIG_SMALL_ERROR    0.2    // Small error range (degrees)
+#define TURN_BIG_LARGE_ERROR    0.5    // Large error range (degrees)
 
 // Movement thresholds
 #define POSITION_THRESHOLD      2.0    // Acceptable error for position (inches)
@@ -233,15 +255,24 @@
 // Autonomous mode enumeration
 enum class AutoMode {
     DISABLED = 0,
-    RED_LEFT_AWP = 1,
-    RED_LEFT_BONUS = 2,
-    RED_RIGHT_AWP = 3,
-    RED_RIGHT_BONUS = 4,
-    SKILLS = 5,
-    TEST_DRIVE = 6,
-    TEST_TURN = 7,
-    TEST_NAVIGATION = 8,
-    TEST_ODOMETRY = 9
+    
+    // Bonus Point Routes (Primary Strategy)
+    RED_LEFT_BONUS = 1,
+    RED_RIGHT_BONUS = 2, 
+    BLUE_LEFT_BONUS = 3,
+    BLUE_RIGHT_BONUS = 4,
+    
+    // AWP Routes (Backup Strategy)
+    RED_LEFT_AWP = 5,
+    RED_RIGHT_AWP = 6,
+    BLUE_LEFT_AWP = 7, 
+    BLUE_RIGHT_AWP = 8,
+    
+    SKILLS = 9,
+    TEST_DRIVE = 10,
+    TEST_TURN = 11,
+    TEST_NAVIGATION = 12,
+    TEST_ODOMETRY = 13
 };
 
 #endif // _CONFIG_H_

@@ -41,6 +41,7 @@
 #include "pto.h"
 #include "drivetrain.h"
 #include "intake.h"
+#include "autonomous_testing.h"
 //#include "okapi/api.hpp"
 
 /**
