@@ -203,11 +203,12 @@ void Intake::update(pros::Controller& controller) {
         double motor_velocity = front_loader_motor.get_actual_velocity();
         bool motor_stalled = (motor_current > 1500 && fabs(motor_velocity) < 5.0);  // High current, low velocity
         
-        printf("Front Loader Status: Pos=%.1f° Target=%.1f° Error=%.1f° Motor=%.1f° Current=%dmA Vel=%.1fRPM AtTarget=%s%s\n", 
-               current_pos, front_loader_target_position, error, motor_pos, 
-               (int)motor_current, motor_velocity,
-               isAtTarget() ? "YES" : "NO",
-               motor_stalled ? " STALLED!" : "");
+        // Front loader status logging removed to reduce console spam
+        // printf("Front Loader Status: Pos=%.1f° Target=%.1f° Error=%.1f° Motor=%.1f° Current=%dmA Vel=%.1fRPM AtTarget=%s%s\n", 
+        //        current_pos, front_loader_target_position, error, motor_pos, 
+        //        (int)motor_current, motor_velocity,
+        //        isAtTarget() ? "YES" : "NO",
+        //        motor_stalled ? " STALLED!" : "");
         
         // If motor is stalled, stop and report
         if (motor_stalled) {

@@ -64,11 +64,6 @@ void initializeGlobalSubsystems() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	// Initialize LCD once and set basic startup message
-	pros::lcd::initialize();
-	pros::lcd::set_text(0, "Pushback Robot");
-	pros::lcd::set_text(1, "Initializing...");
-	
 	// Brief delay for initialization
 	printf("Robot initializing...\n");
 	pros::delay(500);
@@ -84,6 +79,43 @@ void initialize() {
 	
 	// Display completion on controller
 	master->set_text(0, 0, "INIT DONE");
+	
+	// Brief delay to check competition status
+	pros::delay(100);
+	
+	// Autonomous selection for development mode ONLY (when no competition switch)
+	if (!pros::competition::is_connected()) {
+		printf("Development Mode: 10 seconds for autonomous selection\n");
+		
+		// Show available modes on controller
+		master->set_text(0, 0, "AUTO SELECT");
+		master->set_text(1, 0, "UP/DN: change A: ok");
+		
+		// Allow 10 seconds for selection in development mode
+		int countdown = 500; // 500 * 20ms = 10 seconds
+		while (countdown > 0) {
+			autonomous_system->getSelector().update();
+			
+			// Update countdown display every 0.5 seconds
+			if (countdown % 25 == 0) {
+				master->print(1, 0, "A:ok %ds left", countdown / 50);
+			}
+			
+			countdown--;
+			pros::delay(20);
+		}
+		
+		master->set_text(0, 0, "READY");
+		master->set_text(1, 0, "L1+L2 to test");
+		pros::delay(1000);
+		
+		printf("Development selection complete. Use L1+L2 to test or R1+R2 to change.\n");
+	} else {
+		printf("Competition mode detected - selection will happen in disabled() period\n");
+		master->set_text(0, 0, "COMPETITION");
+		master->set_text(1, 0, "Select in disabled");
+		pros::delay(1000);
+	}
 	
 	printf("=== INITIALIZATION COMPLETE ===\n");
 }
@@ -231,8 +263,19 @@ void opcontrol() {
 		if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1) && 
 			master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
 			
+			printf("=== L1+L2 PRESSED - TESTING AUTONOMOUS ===\n");
+			
+			// Check if autonomous system is properly initialized
+			if (!autonomous_system) {
+				printf("ERROR: autonomous_system is NULL!\n");
+				master->set_text(0, 0, "ERROR: NO AUTO SYS");
+				pros::delay(2000);
+				continue;
+			}
+			
 			// Get currently selected mode
 			AutoMode current_mode = autonomous_system->getSelector().getSelectedMode();
+			printf("Current selected mode: %d\n", static_cast<int>(current_mode));
 			
 			// Show current selection and confirm
 			master->set_text(0, 0, "TEST CURRENT AUTO");
@@ -249,8 +292,10 @@ void opcontrol() {
 			master->set_text(1, 0, "Stand Clear!");
 			pros::delay(2000);
 			
+			printf("About to call autonomous_system->runAutonomous()\n");
 			// Run autonomous
 			autonomous_system->runAutonomous();
+			printf("Returned from autonomous_system->runAutonomous()\n");
 			
 			// Back to driver control
 			master->set_text(0, 0, "DRIVER CONTROL");

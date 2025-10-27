@@ -67,24 +67,15 @@ void AutoSelector::displayOptions() {
         "Test: Odometry"
     };
     
-    // Display on both LCD and controller screen
-    pros::lcd::clear();
-    pros::lcd::set_text(0, "=== AUTO SELECT ===");
-    pros::lcd::set_text(1, mode_names[selector_position]);
-    
-    // Also display on controller screen
+    // Display on controller screen only
     pros::Controller master(pros::E_CONTROLLER_MASTER);
     if (master.is_connected()) {
         if (mode_confirmed) {
-            master.print(0, 0, "CONFIRMED: %s", mode_names[selector_position]);
-            master.print(1, 0, "Press A to change");
-            pros::lcd::set_text(2, "CONFIRMED!");
-            pros::lcd::set_text(3, "Press A to change");
+            master.print(0, 0, "READY: %s", mode_names[selector_position]);
+            master.print(1, 0, "A:change L1+L2:test");
         } else {
-            master.print(0, 0, "Select: %s", mode_names[selector_position]);
-            master.print(1, 0, "UP/DOWN: change, A: confirm");
-            pros::lcd::set_text(2, "Controller: UP/DOWN");
-            pros::lcd::set_text(3, "A: Confirm selection");
+            master.print(0, 0, "%d: %s", selector_position, mode_names[selector_position]);
+            master.print(1, 0, "UP/DN:change A:ok");
         }
     }
 }
@@ -176,7 +167,7 @@ void AutonomousSystem::initialize() {
     horizontal_encoder.reset();
     
     // Calibrate gyroscope
-    pros::lcd::set_text(0, "Calibrating Gyro...");
+    printf("Calibrating gyro...\n");
     gyro.reset();
     
     // Wait for gyro calibration (up to 3 seconds)
@@ -188,10 +179,8 @@ void AutonomousSystem::initialize() {
     
     if (gyro.is_calibrating()) {
         printf("WARNING: Gyro calibration timeout!\n");
-        pros::lcd::set_text(1, "Gyro timeout!");
     } else {
         printf("Gyro calibration complete\n");
-        pros::lcd::set_text(1, "Gyro ready");
     }
     
     // Initialize position
@@ -203,11 +192,12 @@ void AutonomousSystem::initialize() {
     
     odometry_initialized = true;
     printf("Autonomous System initialized\n");
-    // Initialize LemLib chassis and odometry
-    initializeLemLib();
+    
+    // LemLib is already initialized in initializeGlobalSubsystems()
+    // No need to initialize again here
     
     pros::delay(500);
-    pros::lcd::clear();
+    printf("Autonomous System initialization complete\n");
 }
 
 void AutonomousSystem::updateOdometry() {
@@ -431,7 +421,7 @@ void AutonomousSystem::executeRedLeftAWP() {
     pros::delay(1200);
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "Red Left AWP finished!");
+    printf("Red Left AWP finished!\n");
 
     autonomous_running = false;
     printf("Red Left AWP Route Complete\n");
@@ -521,7 +511,7 @@ void AutonomousSystem::executeRedLeftBonus() {
     pros::delay(1000); // Ensure all blocks are scored
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "Left BONUS Complete!");
+    printf("Left BONUS Complete!\n");
     autonomous_running = false;
     printf("Red Left BONUS Route Complete - Maximum Points + AWP achieved\n");
 }
@@ -609,7 +599,7 @@ void AutonomousSystem::executeRedRightAWP() {
     pros::delay(1200);
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "Red Right AWP finished!");
+    printf("Red Right AWP finished!\n");
 
     autonomous_running = false;
     printf("Red Right AWP Route Complete\n");
@@ -697,7 +687,7 @@ void AutonomousSystem::executeRedRightBonus() {
     pros::delay(1000); // Ensure all blocks are scored
     indexer_system->stopAll();
 
-    pros::lcd::print(4, "BONUS Route Complete!");
+    printf("BONUS Route Complete!\n");
     autonomous_running = false;
     printf("Red Right BONUS Route Complete - Maximum Points + AWP achieved\n");
 }
@@ -746,6 +736,30 @@ void AutonomousSystem::runAutonomous() {
         case AutoMode::TEST_DRIVE:
             printf("🚗 TEST: Drive 24 inches forward\n");
             printf("Current PID gains: P=%.2f, I=%.3f, D=%.2f\n", DRIVE_KP, DRIVE_KI, DRIVE_KD);
+            
+            // First try a basic motor test
+            printf("=== BASIC MOTOR TEST ===\n");
+            printf("Testing raw motor movement...\n");
+            
+            // Test individual motors from LemLib config
+            printf("Moving left motors forward...\n");
+            left_motor_group.move_velocity(100);  // 100 RPM forward
+            pros::delay(1000);  // 1 second
+            left_motor_group.brake();
+            
+            printf("Moving right motors forward...\n");
+            right_motor_group.move_velocity(100);  // 100 RPM forward
+            pros::delay(1000);  // 1 second
+            right_motor_group.brake();
+            
+            printf("Moving both sides forward...\n");
+            left_motor_group.move_velocity(100);
+            right_motor_group.move_velocity(100);
+            pros::delay(1000);  // 1 second
+            left_motor_group.brake();
+            right_motor_group.brake();
+            
+            printf("Basic motor test complete. Now testing LemLib...\n");
             testStraightDrive(24.0);  // Test 24" drive
             break;
             

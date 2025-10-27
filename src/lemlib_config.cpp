@@ -27,8 +27,16 @@ pros::Motor right_back_motor(RIGHT_MOTORS_REVERSED ? -RIGHT_BACK_MOTOR_PORT : RI
 
 // Create motor groups for LemLib (front and back wheels only for consistent drive)
 // Middle wheels will be managed separately due to PTO system
-pros::MotorGroup left_motor_group({LEFT_FRONT_MOTOR_PORT, LEFT_BACK_MOTOR_PORT});
-pros::MotorGroup right_motor_group({RIGHT_FRONT_MOTOR_PORT, RIGHT_BACK_MOTOR_PORT});
+// Apply proper motor reversal for LemLib motor groups
+pros::MotorGroup left_motor_group({
+    LEFT_MOTORS_REVERSED ? -LEFT_FRONT_MOTOR_PORT : LEFT_FRONT_MOTOR_PORT,
+    LEFT_MOTORS_REVERSED ? -LEFT_BACK_MOTOR_PORT : LEFT_BACK_MOTOR_PORT
+});
+
+pros::MotorGroup right_motor_group({
+    RIGHT_MOTORS_REVERSED ? -RIGHT_FRONT_MOTOR_PORT : RIGHT_FRONT_MOTOR_PORT,
+    RIGHT_MOTORS_REVERSED ? -RIGHT_BACK_MOTOR_PORT : RIGHT_BACK_MOTOR_PORT
+});
 
 // Drivetrain configuration
 lemlib::Drivetrain drivetrain(
