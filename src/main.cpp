@@ -37,8 +37,18 @@ AutonomousSystem* autonomous_system = nullptr;
 void initializeGlobalSubsystems() {
     printf("Initializing global subsystems...\n");
     
-    // Initialize LemLib first (this ensures motor objects exist)
+    // Initialize LemLib first (safe to call multiple times)
+    printf("🔧 Calling LemLib initialization...\n");
     initializeLemLib();
+    
+    // Validate that all LemLib objects were created successfully
+    if (!validateLemLibInitialization()) {
+        printf("❌ FATAL ERROR: LemLib initialization failed!\n");
+        printf("❌ Cannot continue - robot will not function properly\n");
+        return;
+    }
+    
+    printf("✅ LemLib verified and ready\n");
     
     // Create controller
     master = new pros::Controller(pros::E_CONTROLLER_MASTER);
@@ -46,13 +56,17 @@ void initializeGlobalSubsystems() {
     // Create PTO system
     pto_system = new PTO();
     
-    // Create drivetrain (now uses LemLib motor references)
+    // Create drivetrain (now uses LemLib motor references) - ONLY after LemLib is validated
     custom_drivetrain = new Drivetrain(pto_system);
     
     // Create subsystems that depend on other systems
     indexer_system = new IndexerSystem(pto_system);
     intake_system = new Intake();
-    autonomous_system = new AutonomousSystem(custom_drivetrain, pto_system, indexer_system);
+    autonomous_system = new AutonomousSystem(pto_system, indexer_system);
+    
+    // Engage PTO to lift middle wheels (reduces friction during testing)
+    printf("Lifting middle wheels via PTO...\n");
+    pto_system->setScorerMode();  // This lifts/disconnects middle wheels
     
     printf("Global subsystems initialized!\n");
 }
@@ -120,6 +134,38 @@ void initialize() {
 	printf("=== INITIALIZATION COMPLETE ===\n");
 }
 
+/**
+ * Display ASCII art status on controller
+ */
+void displayControllerArt(const char* mode, const char* status) {
+	if (!master || !master->is_connected()) return;
+	
+	// Different ASCII art based on mode
+	if (strcmp(mode, "AWP") == 0) {
+		master->set_text(0, 0, "AWP MODE   [*]   ");
+		master->set_text(1, 0, status);
+	} else if (strcmp(mode, "SKILLS") == 0) {
+		master->set_text(0, 0, "SKILLS    \\o/   ");
+		master->set_text(1, 0, status);
+	} else if (strcmp(mode, "TEST") == 0) {
+		master->set_text(0, 0, "TEST      <->    ");
+		master->set_text(1, 0, status);
+	} else if (strcmp(mode, "SUCCESS") == 0) {
+		master->set_text(0, 0, "SUCCESS    :)    ");
+		master->set_text(1, 0, "   [✓] Done      ");
+	} else if (strcmp(mode, "ERROR") == 0) {
+		master->set_text(0, 0, "ERROR      :(    ");
+		master->set_text(1, 0, "   [X] Failed    ");
+	} else if (strcmp(mode, "LOADING") == 0) {
+		master->set_text(0, 0, "WORKING...       ");
+		master->set_text(1, 0, " [=====>    ]    ");
+	} else {
+		// Default
+		master->set_text(0, 0, mode);
+		master->set_text(1, 0, status);
+	}
+}
+
 
 	
 
@@ -143,7 +189,7 @@ void disabled() {
 		
 		// Allow 10 seconds for selection in development mode
 		int countdown = 500; // 500 * 20ms = 10 seconds
-		while (countdown > 0) {
+		while (countdown > 0 && !autonomous_system->getSelector().isModeConfirmed()) {
 			autonomous_system->getSelector().update();
 			
 			// Update countdown display
@@ -157,10 +203,10 @@ void disabled() {
 		
 		master->set_text(0, 0, "SELECTION DONE");
 		master->set_text(1, 0, "Starting...");
-		pros::delay(1000);
+		// pros::delay(1000);  // REMOVED: No delay after selection
 	} else {
 		// Competition mode - continuous loop during disabled period
-		while (pros::competition::is_disabled()) {
+		while (pros::competition::is_disabled() && !autonomous_system->getSelector().isModeConfirmed()) {
 			// Update autonomous selector (UP/DOWN/A buttons work here)
 			autonomous_system->getSelector().update();
 			
@@ -209,6 +255,14 @@ void competition_initialize() {
  */
 void autonomous() {
 	printf("=== AUTONOMOUS PERIOD STARTED ===\n");
+	
+	// CRITICAL: Ensure PTO is in scorer mode (pistons UP) for autonomous
+	printf("🔧 Pre-flight check: Setting PTO to scorer mode...\n");
+	if (pto_system) {
+		pto_system->setScorerMode();  // Pistons UP - disconnects middle wheels
+		pros::delay(300);  // Allow pneumatics time to fully actuate
+		printf("✅ PTO pistons UP - middle wheels disconnected for scoring\n");
+	}
 	
 	// Display autonomous start on controller
 	master->set_text(0, 0, "AUTON RUNNING");
@@ -287,20 +341,52 @@ void opcontrol() {
 				pros::delay(20);
 			}
 			
-			// Show test execution warning
-			master->set_text(0, 0, "RUNNING AUTO!");
-			master->set_text(1, 0, "Stand Clear!");
+			// Show test execution warning with ASCII art
+			displayControllerArt("LOADING", "Stand Clear!");
 			pros::delay(2000);
+			
+			// PREPARE FOR AUTONOMOUS TRANSITION
+			printf("=== PREPARING AUTONOMOUS TRANSITION ===\n");
+			
+			// 1. Stop all current drivetrain activity
+			custom_drivetrain->stop();
+			printf("✓ Stopped custom drivetrain\n");
+			
+			// 2. Ensure PTO is in correct state for autonomous (SCORING MODE - middle wheels for scoring)
+			if (pto_system) {
+				if (pto_system->isDrivetrainMode()) {
+					printf("Setting PTO to scorer mode for autonomous (middle wheels for scoring)...\n");
+					pto_system->setScorerMode(); // This puts middle wheels in scoring position
+					pros::delay(300); // Allow pneumatics to actuate
+				}
+				printf("✓ PTO in scorer mode (autonomous uses 2-wheel drive + middle wheels for scoring)\n");
+			}
+			
+			// 3. Re-initialize LemLib if needed (fresh start)
+			printf("Re-initializing LemLib for clean autonomous start...\n");
+			chassis->setPose(0, 0, 0); // Reset odometry
+			pros::delay(100);
+			printf("✓ LemLib reset complete\n");
 			
 			printf("About to call autonomous_system->runAutonomous()\n");
 			// Run autonomous
 			autonomous_system->runAutonomous();
 			printf("Returned from autonomous_system->runAutonomous()\n");
 			
-			// Back to driver control
-			master->set_text(0, 0, "DRIVER CONTROL");
-			master->set_text(1, 0, "Auto Test Done");
-			pros::delay(1000);
+			// RESTORE OPCONTROL STATE
+			printf("=== RESTORING OPCONTROL STATE ===\n");
+			
+			// 1. Stop any residual LemLib activity
+			// LemLib should handle this automatically, but ensure motors are stopped
+			pros::delay(100);
+			
+			// 2. Reset custom drivetrain brake modes for opcontrol
+			custom_drivetrain->setBrakeMode(DRIVETRAIN_BRAKE_MODE); // Coast mode
+			printf("✓ Restored opcontrol brake mode\n");
+			
+			// Back to driver control with success indicator
+			displayControllerArt("SUCCESS", "Test Complete!");
+			pros::delay(2000);
 		}
 
 		// Check for autonomous mode change (R1+R2 = change autonomous mode)

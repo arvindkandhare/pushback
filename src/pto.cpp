@@ -27,6 +27,9 @@ void PTO::setDrivetrainMode() {
     right_pneumatic.set_value(PTO_EXTENDED);
     current_state = PTO_EXTENDED;
     
+    // Allow pneumatics time to actuate (critical for proper operation)
+    pros::delay(250);
+    
     // Debug output
     // LCD call removed to prevent rendering conflicts
 }
@@ -36,6 +39,9 @@ void PTO::setScorerMode() {
     left_pneumatic.set_value(PTO_RETRACTED);
     right_pneumatic.set_value(PTO_RETRACTED);
     current_state = PTO_RETRACTED;
+    
+    // Allow pneumatics time to actuate (critical for proper operation)
+    pros::delay(250);
     
     // Debug output
     // LCD call removed to prevent rendering conflicts

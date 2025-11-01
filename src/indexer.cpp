@@ -122,9 +122,9 @@ void IndexerSystem::executeFront() {
     switch (current_mode) {
         case ScoringMode::COLLECTION:
             if (score_from_top_storage) {
-                printf("DEBUG: FRONT Collection (STORAGE) - Moving balls from storage\n");
+                printf("DEBUG: FRONT Collection (STORAGE) - Moving balls from storage toward front\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED); // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);    // Move balls back from storage
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_FRONT_SPEED);    // Move balls toward front goal from storage
                 runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Normal collection
             } else {
                 printf("DEBUG: FRONT Collection - Left middle motor: %d\n", LEFT_INDEXER_FRONT_COLLECTION_SPEED);
@@ -138,9 +138,9 @@ void IndexerSystem::executeFront() {
             
         case ScoringMode::MID_GOAL:
             if (score_from_top_storage) {
-                printf("DEBUG: FRONT Mid Goal (STORAGE) - Moving balls from storage then scoring\n");
+                printf("DEBUG: FRONT Mid Goal (STORAGE) - Moving balls from storage toward front\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED);     // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);        // Move balls back from storage
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_FRONT_SPEED);        // Move balls toward front goal from storage
             } else {
                 printf("DEBUG: FRONT Mid Goal - Left middle motor: %d\n", LEFT_INDEXER_FRONT_MID_GOAL_SPEED);
                 runLeftIndexer(LEFT_INDEXER_FRONT_MID_GOAL_SPEED); // Direct speed for front mid goal
@@ -151,9 +151,9 @@ void IndexerSystem::executeFront() {
             
         case ScoringMode::LOW_GOAL:
             if (score_from_top_storage) {
-                printf("DEBUG: FRONT Low Goal (STORAGE) - Moving balls from storage then reverse intake\n");
+                printf("DEBUG: FRONT Low Goal (STORAGE) - Moving balls from storage toward front then reverse intake\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED); // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);    // Move balls back from storage
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_FRONT_SPEED);    // Move balls toward front goal from storage
                 startInputReverse(); // Run intake motor in reverse for low goal
             } else {
                 printf("DEBUG: FRONT Low Goal - Only intake motor reverse: %d\n", INPUT_MOTOR_REVERSE_SPEED);
@@ -163,10 +163,15 @@ void IndexerSystem::executeFront() {
             break;
             
         case ScoringMode::TOP_GOAL:
-            // TOP_GOAL stays the same regardless of storage mode (balls go directly from storage)
-            printf("DEBUG: FRONT Top Goal - Left middle + top indexer: %d, %d\n", LEFT_INDEXER_FRONT_TOP_GOAL_SPEED, TOP_INDEXER_FRONT_SPEED);
-            runLeftIndexer(LEFT_INDEXER_FRONT_TOP_GOAL_SPEED); // Direct speed for front top goal
-            runTopIndexer(TOP_INDEXER_FRONT_SPEED);  // Direct speed for top indexer front
+            if (score_from_top_storage) {
+                printf("DEBUG: FRONT Top Goal (STORAGE) - Moving balls from storage toward back goal\n");
+                runLeftIndexer(LEFT_INDEXER_FRONT_TOP_GOAL_SPEED); // Direct speed for front top goal
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_BACK_SPEED);          // Move balls toward back goal from storage
+            } else {
+                printf("DEBUG: FRONT Top Goal - Left middle + top indexer: %d, %d\n", LEFT_INDEXER_FRONT_TOP_GOAL_SPEED, TOP_INDEXER_FRONT_SPEED);
+                runLeftIndexer(LEFT_INDEXER_FRONT_TOP_GOAL_SPEED); // Direct speed for front top goal
+                runTopIndexer(TOP_INDEXER_FRONT_SPEED);            // Direct speed for top indexer front
+            }
             runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Direct speed for back collection
             startInput(); // Input motor runs in all scoring modes
             // LCD call removed to prevent rendering conflicts
@@ -230,9 +235,9 @@ void IndexerSystem::executeBack() {
     switch (current_mode) {
         case ScoringMode::COLLECTION:
             if (score_from_top_storage) {
-                printf("DEBUG: BACK Collection (STORAGE) - Moving balls from storage\n");
+                printf("DEBUG: BACK Collection (STORAGE) - Moving balls from storage toward back\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED);     // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);        // Move balls back from storage
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_BACK_SPEED);        // Move balls toward back goal from storage
                 runRightIndexer(RIGHT_INDEXER_COLLECTION_SPEED); // Normal collection
             } else {
                 printf("DEBUG: BACK Collection - Right: %d, Left helper: %d\n", RIGHT_INDEXER_COLLECTION_SPEED, LEFT_INDEXER_BACK_COLLECTION_SPEED);
@@ -245,9 +250,9 @@ void IndexerSystem::executeBack() {
             
         case ScoringMode::MID_GOAL:
             if (score_from_top_storage) {
-                printf("DEBUG: BACK Mid Goal (STORAGE) - Moving balls from storage then scoring\n");
+                printf("DEBUG: BACK Mid Goal (STORAGE) - Moving balls from storage toward back\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED);   // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);      // Move balls back from storage  
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_BACK_SPEED);      // Move balls toward back goal from storage
                 runRightIndexer(RIGHT_INDEXER_MID_GOAL_SPEED); // Back mid goal scoring
             } else {
                 printf("DEBUG: BACK Mid Goal - Right: %d, Left helper: %d\n", RIGHT_INDEXER_MID_GOAL_SPEED, LEFT_INDEXER_BACK_MID_GOAL_SPEED);
@@ -260,9 +265,9 @@ void IndexerSystem::executeBack() {
             
         case ScoringMode::LOW_GOAL:
             if (score_from_top_storage) {
-                printf("DEBUG: BACK Low Goal (STORAGE) - Moving balls from storage then reverse intake\n");
+                printf("DEBUG: BACK Low Goal (STORAGE) - Moving balls from storage toward back then reverse intake\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED); // Move balls back from storage
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);    // Move balls back from storage
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_BACK_SPEED);    // Move balls toward back goal from storage
                 startInputReverse(); // Run intake motor in reverse for low goal
             } else {
                 printf("DEBUG: BACK Low Goal - Only intake motor reverse: %d\n", INPUT_MOTOR_REVERSE_SPEED);
@@ -275,7 +280,7 @@ void IndexerSystem::executeBack() {
             if (score_from_top_storage) {
                 printf("DEBUG: BACK Top Goal (STORAGE) - Front toward back + Top toward back + Back scoring\n");
                 runLeftIndexer(FRONT_INDEXER_STORAGE_SPEED);   // Front roller toward back (Option B)
-                runTopIndexer(TOP_INDEXER_STORAGE_SPEED);      // Top roller toward back
+                runTopIndexer(TOP_INDEXER_STORAGE_TO_BACK_SPEED);      // Top roller toward back goal
                 runRightIndexer(RIGHT_INDEXER_TOP_GOAL_SPEED); // Back roller to back top goal
             } else {
                 printf("DEBUG: BACK Top Goal - Right: %d, Top: %d, Left helper: %d\n", RIGHT_INDEXER_TOP_GOAL_SPEED, TOP_INDEXER_BACK_SPEED, LEFT_INDEXER_BACK_TOP_GOAL_SPEED);
@@ -334,7 +339,7 @@ void IndexerSystem::toggleFrontFlap() {
 void IndexerSystem::startInput() {
     if (!input_motor_active) {
         printf("DEBUG: Starting input motor at %d RPM\n", INPUT_MOTOR_SPEED);
-        input_motor.move_velocity(INPUT_MOTOR_SPEED);
+        input_motor.move(INPUT_MOTOR_SPEED);
         input_motor_active = true;
         input_start_time = pros::millis();
         
@@ -348,7 +353,7 @@ void IndexerSystem::startInput() {
 void IndexerSystem::startInputReverse() {
     if (!input_motor_active) {
         printf("DEBUG: Starting input motor in REVERSE at %d RPM\n", INPUT_MOTOR_REVERSE_SPEED);
-        input_motor.move_velocity(INPUT_MOTOR_REVERSE_SPEED);
+        input_motor.move(INPUT_MOTOR_REVERSE_SPEED);
         input_motor_active = true;
         input_start_time = pros::millis();
         
@@ -361,7 +366,7 @@ void IndexerSystem::startInputReverse() {
 
 void IndexerSystem::stopInput() {
     if (input_motor_active) {
-        input_motor.move_velocity(0);
+        input_motor.move(0);
         input_motor_active = false;
         
         // LCD call removed to prevent rendering conflicts
@@ -376,7 +381,7 @@ void IndexerSystem::stopAll() {
     ExecutionDirection previous_direction = last_direction;
     
     // Stop all motors explicitly
-    input_motor.move_velocity(0);
+    input_motor.move(0);
     input_motor.move(0);  // Double-stop to ensure it's off
     
     stopLeftIndexer();   // Stop left middle motor (front)
@@ -758,7 +763,7 @@ void IndexerSystem::runLeftIndexer(int speed) {
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     
     // Run the left middle wheel for front indexer with direct speed control
-    left_middle.move_velocity(speed);
+    left_middle.move(speed);
     printf("DEBUG: Left middle motor (front indexer) direct speed: %d\n", speed);
 }
 
@@ -770,22 +775,21 @@ void IndexerSystem::runRightIndexer(int speed) {
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     
     // Run the right middle wheel for back indexer with direct speed control
-    right_middle.move_velocity(speed);
+    right_middle.move(speed);
     printf("DEBUG: Right middle motor (back indexer) direct speed: %d\n", speed);
 }
 
 void IndexerSystem::runTopIndexer(int speed) {
     // Top indexer is shared between front top and back top scoring
     printf("DEBUG: runTopIndexer() called with speed: %d\n", speed);
-    top_indexer.move_velocity(speed);
+    top_indexer.move(speed);
     printf("DEBUG: Top indexer motor command sent\n");
 }
 
 void IndexerSystem::stopTopIndexer() {
     // Stop the top indexer motor
     printf("DEBUG: Stopping top indexer\n");
-    top_indexer.move_velocity(0);
-    top_indexer.move(0);  // Double-stop to ensure it's off
+    top_indexer.move(0);
 }
 
 // Testing functions for individual indexer control
@@ -800,7 +804,7 @@ void IndexerSystem::testLeftIndexer(int speed) {
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     
     // Run left middle wheel for testing with direct speed control
-    left_middle.move_velocity(speed);
+    left_middle.move(speed);
     
     // LCD call removed to prevent rendering conflicts
 }
@@ -816,7 +820,7 @@ void IndexerSystem::testRightIndexer(int speed) {
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
     
     // Run right middle wheel for testing with direct speed control
-    right_middle.move_velocity(speed);
+    right_middle.move(speed);
     
     // LCD call removed to prevent rendering conflicts
 }
@@ -824,8 +828,7 @@ void IndexerSystem::testRightIndexer(int speed) {
 void IndexerSystem::stopLeftIndexer() {
     // Stop LEFT middle wheel with direct motor control
     pros::Motor left_middle(LEFT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    left_middle.move_velocity(0);
-    left_middle.move(0);  // Double-stop to ensure it's off
+    left_middle.move(0);
     
     // LCD call removed to prevent rendering conflicts
 }
@@ -833,8 +836,7 @@ void IndexerSystem::stopLeftIndexer() {
 void IndexerSystem::stopRightIndexer() {
     // Stop RIGHT middle wheel with direct motor control
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, DRIVETRAIN_GEARSET);
-    right_middle.move_velocity(0);
-    right_middle.move(0);  // Double-stop to ensure it's off
+    right_middle.move(0);
     
     // LCD call removed to prevent rendering conflicts
 }

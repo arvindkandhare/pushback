@@ -8,12 +8,12 @@
 #include "drivetrain.h"
 
 Drivetrain::Drivetrain(PTO* pto) 
-    : left_front(left_front_motor),     // Reference to existing LemLib motor
-      left_middle(left_middle_motor),   // Reference to existing LemLib motor
-      left_back(left_back_motor),       // Reference to existing LemLib motor
-      right_front(right_front_motor),   // Reference to existing LemLib motor
-      right_middle(right_middle_motor), // Reference to existing LemLib motor
-      right_back(right_back_motor),     // Reference to existing LemLib motor
+    : left_front(*left_front_motor),     // Reference to existing LemLib motor
+      left_middle(*left_middle_motor),   // Reference to existing LemLib motor
+      left_back(*left_back_motor),       // Reference to existing LemLib motor
+      right_front(*right_front_motor),   // Reference to existing LemLib motor
+      right_middle(*right_middle_motor), // Reference to existing LemLib motor
+      right_back(*right_back_motor),     // Reference to existing LemLib motor
       pto_system(pto) {
     
     // Set brake mode for all motors

@@ -8,11 +8,10 @@
 #ifndef _AUTONOMOUS_H_
 #define _AUTONOMOUS_H_
 
-#include "api.h"
 #include "config.h"
-#include "drivetrain.h"
 #include "pto.h"
 #include "indexer.h"
+#include "lemlib/api.hpp"
 #include <cmath>
 
 /**
@@ -63,48 +62,26 @@ public:
 
 /**
  * Main Autonomous System class
- * Handles odometry tracking, navigation, and autonomous routines
+ * Thin wrapper over LemLib for autonomous routines
  */
 class AutonomousSystem {
 private:
-    // Hardware references
-    pros::adi::Encoder vertical_encoder;
-    pros::adi::Encoder horizontal_encoder;
-    pros::Imu gyro;
-    
-    Drivetrain* drivetrain;
+    // System references (no hardware - LemLib handles that)
     PTO* pto_system;
     IndexerSystem* indexer_system;
     AutoSelector auto_selector;
     
-    // Position tracking
-    Position current_position;
-    Position target_position;
-    
-    // Movement control
-    PIDController drive_pid;
-    PIDController turn_pid;
-    
     // State tracking
-    bool odometry_initialized;
     bool autonomous_running;
-    uint32_t last_update_time;
     
-    // Internal methods
-    void updateOdometry();
-    double normalizeAngle(double angle);
-    double getDistanceToTarget();
-    double getAngleToTarget();
-    double getHeadingError(double target_heading);
-
     // Standard scoring sequences
     void executePostScoringBump(double bump_distance = 8.0, double retreat_distance = 10.0);
     
 public:
     /**
-     * Constructor - initializes all sensors and systems
+     * Constructor - thin wrapper initialization
      */
-    AutonomousSystem(Drivetrain* dt, PTO* pto, IndexerSystem* indexer);
+    AutonomousSystem(PTO* pto, IndexerSystem* indexer);
     
     /**
      * Initialize autonomous system - call during initialize()
@@ -112,26 +89,23 @@ public:
     void initialize();
     
     /**
-     * Update odometry and selector - call continuously in disabled/competition_initialize
+     * Update selector - call continuously in disabled/competition_initialize
      */
     void update();
     
     /**
-     * Set robot position (for calibration)
+     * LemLib wrapper functions (all movement goes through LemLib)
+     */
+    void driveToPoint(double x, double y, double timeout_ms = 5000);
+    void turnToHeading(double heading, double timeout_ms = 3000);
+    void driveDistance(double distance, double heading = 0, double timeout_ms = 5000);
+    
+    /**
+     * Position functions (LemLib wrappers)
      */
     void setPosition(double x, double y, double heading);
-    
-    /**
-     * Get current robot position
-     */
-    Position getPosition();
-    
-    /**
-     * Navigation functions
-     */
-    void driveToPoint(double x, double y, double max_speed = DRIVE_MAX_SPEED, double timeout_ms = 5000);
-    void turnToHeading(double heading, double max_speed = TURN_MAX_SPEED, double timeout_ms = 3000);
-    void driveDistance(double distance, double heading = -999, double max_speed = DRIVE_MAX_SPEED, double timeout_ms = 5000);
+    lemlib::Pose getPosition();
+    void printPosition();
     
     /**
      * Autonomous route functions
@@ -158,9 +132,7 @@ public:
     /**
      * Utility functions
      */
-    bool isMovementComplete();
     void stopAllMovement();
-    void printPosition();
     
     /**
      * Get the autonomous selector for external access
@@ -168,13 +140,13 @@ public:
     AutoSelector& getSelector();
     
     /**
-     * Testing and calibration functions
+     * Testing and calibration functions (LemLib wrappers)
      */
-    void testStraightDrive(double distance = 24.0);
+    void testStraightDrive(double distance = 18.0);
     void testTurnAccuracy(double angle = 90.0);
     void testPointToPoint();
     void testOdometryAccuracy();
-    void printSensorReadings();
+    void testMotorIdentification();
 };
 
 #endif // _AUTONOMOUS_H_

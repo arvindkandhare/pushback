@@ -31,7 +31,7 @@
 #define FRONT_LOADER_MOTOR_PORT 7   // Front match loader motor
 
 // Odometry and navigation sensors
-#define VERTICAL_ENCODER_PORT   9   // Vertical tracking wheel encoder
+#define VERTICAL_ENCODER_PORT   -9  // Vertical tracking wheel encoder (REVERSED like working code)
 #define HORIZONTAL_ENCODER_PORT 10  // Horizontal tracking wheel encoder  
 #define GYRO_PORT              13   // Inertial sensor for heading
 
@@ -126,10 +126,6 @@
 // Motor brake mode (coast allows for easier pushing, brake provides better control)
 #define DRIVETRAIN_BRAKE_MODE   pros::v5::MotorBrake::coast
 
-// Reverse motors on left side for proper tank drive operation
-#define LEFT_MOTORS_REVERSED    true
-#define RIGHT_MOTORS_REVERSED   false
-
 // =============================================================================
 // PTO CONFIGURATION
 // =============================================================================
@@ -176,45 +172,43 @@
 // INDEXER SYSTEM CONFIGURATION
 // =============================================================================
 
-// Indexer motor speeds (RPM)
-#define INDEXER_SPEED_TOP_SCORING    150   // Speed for top scoring (long goal)
-#define INDEXER_SPEED_BOTTOM_SCORING 100   // Speed for bottom scoring (mid goal)
-#define INPUT_MOTOR_SPEED            120   // Speed for ball intake
-#define INPUT_MOTOR_REVERSE_SPEED   -120   // Reverse speed for low goal scoring
+// Indexer motor speeds using move() function (range: -127 to 127, where 127 = 100% power)
+// This is much simpler than RPM conversion and directly represents percentage power
 
-// Direct indexer motor speeds for each mode (positive/negative for direction control)
-// Front scoring speeds (reduced to 50% to prevent overloading)
-#define LEFT_INDEXER_FRONT_COLLECTION_SPEED   -50    // Front collection mode (was -100)
-#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED     50     // Front mid goal (opposite direction) (was 100)
-#define LEFT_INDEXER_FRONT_IMMEDIATE_SPEED     -60    // Front immediate mode (was -120)
-#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED      -75    // Front top goal mode (was -150)
+// INPUT MOTOR (intake) speeds
+#define INPUT_MOTOR_SPEED               125     
+#define INPUT_MOTOR_REVERSE_SPEED      -100   
 
-// Back scoring speeds (when left indexer helps back scoring - reduced to 50%)
-#define LEFT_INDEXER_BACK_COLLECTION_SPEED     60     // Back collection helper (was 120)
-#define LEFT_INDEXER_BACK_MID_GOAL_SPEED      -50     // Back mid goal helper (was -100)
-#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED      60     // Back immediate helper (was 120)
-#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED       -50    // Back top goal helper (was -100)
+// FRONT INDEXER speeds (optimized per user request)
+#define LEFT_INDEXER_FRONT_COLLECTION_SPEED     -100     // 100% power for collection
+#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED        80     // 50% power for mid back
+#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED       -100     // 100% power for mid front (used for front top scoring)
 
-// Right indexer speeds (back scoring main motor)
-#define RIGHT_INDEXER_COLLECTION_SPEED         -120   // Back collection mode
-#define RIGHT_INDEXER_MID_GOAL_SPEED          100   // Back mid goal mode
-#define RIGHT_INDEXER_IMMEDIATE_SPEED          -120   // Back immediate mode
-#define RIGHT_INDEXER_TOP_GOAL_SPEED          -150   // Back top goal mode
+// BACK INDEXER speeds (when left indexer helps back scoring)
+#define LEFT_INDEXER_BACK_COLLECTION_SPEED       63     // Back collection helper
+#define LEFT_INDEXER_BACK_MID_GOAL_SPEED        -80     // Back mid goal helper
+#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED       80      // Back immediate helper
+#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED        -100     // Back top goal helper 
+#define RIGHT_INDEXER_COLLECTION_SPEED         -100    // Back collection mode
+#define RIGHT_INDEXER_MID_GOAL_SPEED           100     // Back mid goal mode  
+#define RIGHT_INDEXER_IMMEDIATE_SPEED          -125    // Back immediate mode
+#define RIGHT_INDEXER_TOP_GOAL_SPEED           -127    // Back top goal mode
 
-// Top indexer speeds
-#define TOP_INDEXER_FRONT_SPEED               150   // Top indexer when scoring front
-#define TOP_INDEXER_BACK_SPEED                -150   // Top indexer when scoring back (opposite)
+// TOP INDEXER speeds
+#define TOP_INDEXER_FRONT_SPEED                125    // Top indexer when scoring front
+#define TOP_INDEXER_BACK_SPEED                -125    // Top indexer when scoring back (opposite)
 
-// Storage mode speeds - for moving balls from top storage back toward intake
-#define TOP_INDEXER_STORAGE_SPEED             -120   // Top indexer moves balls back from storage
-#define FRONT_INDEXER_STORAGE_SPEED           60     // Front indexer moves balls back from storage (was 120)
+// STORAGE MODE speeds - for moving balls from top storage toward goals
+#define TOP_INDEXER_STORAGE_TO_FRONT_SPEED     125     // Top indexer moves balls from storage toward front goal (max speed)
+#define TOP_INDEXER_STORAGE_TO_BACK_SPEED     -125     // Top indexer moves balls from storage toward back goal (max speed)
+#define FRONT_INDEXER_STORAGE_SPEED            100     // Front indexer moves balls back from storage
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION
 // =============================================================================
 
 // Odometry wheel specifications (adjust based on your actual wheels)
-#define TRACKING_WHEEL_DIAMETER  2.75  // Diameter of tracking wheels in inches
+#define TRACKING_WHEEL_DIAMETER  2.0  // Diameter of tracking wheels in inches (actual 2.0" wheels)
 #define TRACKING_WHEEL_CIRCUMFERENCE (TRACKING_WHEEL_DIAMETER * M_PI)
 
 // Robot dimensions (adjust based on your actual robot)
@@ -223,33 +217,33 @@
 
 // Movement control constants - WORKING VALUES from working_code.txt
 // Linear PID (for driving to points) - PROVEN WORKING
-#define DRIVE_KP                20.0   // Proportional gain for driving (was 0.8)
-#define DRIVE_KI                0.0    // Integral gain for driving (was 0.01)  
-#define DRIVE_KD                110.0  // Derivative gain for driving (was 0.1)
+#define DRIVE_KP                20.0   // Proportional gain for driving - PROVEN WORKING VALUE
+#define DRIVE_KI                0.0    // Integral gain for driving
+#define DRIVE_KD                110.0  // Derivative gain for driving - PROVEN WORKING VALUE
 #define DRIVE_WINDUP            0      // Anti windup
-#define DRIVE_SMALL_ERROR       0.25   // Small error range (inches)
-#define DRIVE_SMALL_TIMEOUT     10     // Small error timeout (ms)
-#define DRIVE_LARGE_ERROR       0.5    // Large error range (inches)
-#define DRIVE_LARGE_TIMEOUT     50     // Large error timeout (ms)
-#define DRIVE_SLEW              1      // Maximum acceleration
+#define DRIVE_SMALL_ERROR       0.25   // Small error range (inches) - PROVEN WORKING
+#define DRIVE_SMALL_TIMEOUT     10     // Small error timeout (ms) - PROVEN WORKING
+#define DRIVE_LARGE_ERROR       0.5    // Large error range (inches) - PROVEN WORKING
+#define DRIVE_LARGE_TIMEOUT     50     // Large error timeout (ms) - PROVEN WORKING
+#define DRIVE_SLEW              1      // Maximum acceleration - PROVEN WORKING
 
-// Angular PID (for turning) - PROVEN WORKING
-#define TURN_KP                 2.0    // Proportional gain for turning (was 1.2)
-#define TURN_KI                 0.0    // Integral gain for turning (was 0.02)
-#define TURN_KD                 4.0    // Derivative gain for turning (was 0.15)
+// Angular PID (for turning) - PROVEN WORKING VALUES
+#define TURN_KP                 2.0    // Proportional gain for turning - PROVEN WORKING
+#define TURN_KI                 0.0    // Integral gain for turning
+#define TURN_KD                 4.0    // Derivative gain for turning - PROVEN WORKING
 #define TURN_WINDUP             0      // Anti windup
-#define TURN_SMALL_ERROR        0.2    // Small error range (degrees)
-#define TURN_SMALL_TIMEOUT      10     // Small error timeout (ms)  
-#define TURN_LARGE_ERROR        0.75   // Large error range (degrees)
-#define TURN_LARGE_TIMEOUT      50     // Large error timeout (ms)
-#define TURN_SLEW               0      // Maximum acceleration
+#define TURN_SMALL_ERROR        0.2    // Small error range (degrees) - PROVEN WORKING
+#define TURN_SMALL_TIMEOUT      10     // Small error timeout (ms) - PROVEN WORKING  
+#define TURN_LARGE_ERROR        0.75   // Large error range (degrees) - PROVEN WORKING
+#define TURN_LARGE_TIMEOUT      50     // Large error timeout (ms) - PROVEN WORKING
+#define TURN_SLEW               0      // Maximum acceleration - PROVEN WORKING
 
-// Separate turn controller for larger turns - PROVEN WORKING
-#define TURN_BIG_KP             4.0    // Proportional gain for big turns
+// Separate turn controller for larger turns - PROVEN WORKING VALUES
+#define TURN_BIG_KP             4.0    // Proportional gain for big turns - PROVEN WORKING
 #define TURN_BIG_KI             0.0    // Integral gain for big turns
-#define TURN_BIG_KD             9.0    // Derivative gain for big turns
-#define TURN_BIG_SMALL_ERROR    0.2    // Small error range (degrees)
-#define TURN_BIG_LARGE_ERROR    0.5    // Large error range (degrees)
+#define TURN_BIG_KD             9.0    // Derivative gain for big turns - PROVEN WORKING
+#define TURN_BIG_SMALL_ERROR    0.2    // Small error range (degrees) - PROVEN WORKING
+#define TURN_BIG_LARGE_ERROR    0.5    // Large error range (degrees) - PROVEN WORKING
 
 // Movement thresholds
 #define POSITION_THRESHOLD      2.0    // Acceptable error for position (inches)
@@ -277,7 +271,8 @@ enum class AutoMode {
     TEST_DRIVE = 10,
     TEST_TURN = 11,
     TEST_NAVIGATION = 12,
-    TEST_ODOMETRY = 13
+    TEST_ODOMETRY = 13,
+    TEST_MOTORS = 14
 };
 
 #endif // _CONFIG_H_
