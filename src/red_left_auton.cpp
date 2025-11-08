@@ -1,5 +1,6 @@
 #include "autonomous.h"
 #include "lemlib_config.h"
+#include "main.h"
 #include <utility>
 #include <cmath>  // For cos, sin functions
 
@@ -9,7 +10,6 @@ ASSET(RedRightMoveToGoal_txt);
 
 void AutonomousSystem::executeRedRightAWP() {
 
-    
     printf("Executing Red Left AWP Route (Mirrored from proven Red Right route)\n");
     autonomous_running = true;
 
@@ -23,23 +23,54 @@ void AutonomousSystem::executeRedRightAWP() {
     }   
 
     chassis->setPose(-52, -6, 90);
+    //Set intial position
     
     indexer_system->startInput();
     chassis->follow(RedRightBallCollection_txt, 15, 2000);
     chassis->waitUntilDone();
+    //Intake first 3 balls
+
     indexer_system->stopAll();
     chassis->turnToHeading(182, 1000, {.maxSpeed=120,.minSpeed=100, .earlyExitRange=10});
     chassis->follow(RedRightBallScore_txt, 8, 2000, false);
     chassis->waitUntilDone();
-    //chassis->cancelAllMotions();
+    //Move to middle goal
+
+
     indexer_system->setMidGoalMode();
     indexer_system->executeBack();
-    pros::delay(3000); // brief pause for scoring
+    pros::delay(2500); // brief pause for scoring
+    //pros::delay(3000); // brief pause for scoring
+    //Score on middle goal
+
+
     indexer_system->stopAll();
     chassis->follow(RedRightMoveToGoal_txt, 8, 2000, true);
     chassis->waitUntilDone();
+    //Move to match load
+
+
+    intake_system->deploy();
+    //Deploy matchloader
+
     chassis->turnToHeading(270, 300, {.maxSpeed=120, .minSpeed=100, .earlyExitRange=3});
-    chassis->moveToPose(-65, -47, 270, 5000,{.maxSpeed=120,.minSpeed=100});
+    indexer_system->startInput();
+    chassis->moveToPose(-65, -47, 270, 5000,{.maxSpeed=120,.minSpeed=100});   
+    //Move into matchloader
+
+    pros::delay(3000); 
+
+
+    //TODO
+    //Get the straight pid different from the turn pid
+    //Get the threading working
+    //Get the intake methods working where I can spin the top intake slowly
+    //Make it so that the pure pursuit can speed up and slow down
+    //
+    
+    
+    
+    
     /*
     // Set starting pose for LEFT side (mirror of Red Right's 60°)
     chassis->setPose(0, 0, 120);  // 120° = northwest direction (mirror of 60°)
