@@ -42,6 +42,7 @@
 #include "drivetrain.h"
 #include "intake.h"
 #include "autonomous_testing.h"
+#include "color_sensor.h"
 //#include "okapi/api.hpp"
 
 /**
@@ -85,6 +86,7 @@ class Drivetrain;
 class IndexerSystem;
 class Intake;
 class AutonomousSystem;
+class ColorSensorSystem;
 
 // Global variable declarations (these will be pointers to avoid early construction)
 extern pros::Controller* master;
@@ -93,6 +95,7 @@ extern Drivetrain* custom_drivetrain;  // Renamed to avoid conflict with lemlib:
 extern IndexerSystem* indexer_system;
 extern Intake* intake_system;
 extern AutonomousSystem* autonomous_system;
+extern ColorSensorSystem* color_sensor_system;
 
 // Initialization function to create all global objects
 void initializeGlobalSubsystems();

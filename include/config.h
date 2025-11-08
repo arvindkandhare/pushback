@@ -35,6 +35,10 @@
 #define HORIZONTAL_ENCODER_PORT 10  // Horizontal tracking wheel encoder  
 #define GYRO_PORT              13   // Inertial sensor for heading
 
+// Color sensing and sorting system
+#define COLOR_SENSOR_1_PORT     5   // First color sensor (entry detection)
+#define COLOR_SENSOR_2_PORT     11  // Second color sensor (confirmation/direction)
+
 // =============================================================================
 // ADI PORTS - Sensors and Legacy Devices
 // =============================================================================
@@ -119,6 +123,12 @@
 // Front flap direct control - RIGHT button
 #define FRONT_FLAP_TOGGLE_BUTTON  pros::E_CONTROLLER_DIGITAL_RIGHT // Toggle front flap open/closed
 
+// Color sorting control buttons
+#define COLOR_MODE_RED_BUTTON     pros::E_CONTROLLER_ANALOG_LEFT_X   // Set sorting mode to collect RED balls (left stick X)
+#define COLOR_MODE_BLUE_BUTTON    pros::E_CONTROLLER_ANALOG_RIGHT_X  // Set sorting mode to collect BLUE balls (right stick X)  
+#define COLOR_MANUAL_EJECT_BUTTON pros::E_CONTROLLER_DIGITAL_LEFT    // Manual ball ejection trigger (for testing)
+#define COLOR_SORT_TOGGLE_BUTTON  pros::E_CONTROLLER_DIGITAL_RIGHT   // Toggle sorting on/off (overrides front flap when sorting active)
+
 // =============================================================================
 // MOTOR CONFIGURATION CONSTANTS
 // =============================================================================
@@ -175,36 +185,48 @@
 // INDEXER SYSTEM CONFIGURATION
 // =============================================================================
 
-// Indexer motor speeds using move() function (range: -127 to 127, where 127 = 100% power)
-// This is much simpler than RPM conversion and directly represents percentage power
+// =============================================================================
+// INDEXER MOTOR SPEED CONFIGURATION
+// =============================================================================
 
-// INPUT MOTOR (intake) speeds
-#define INPUT_MOTOR_SPEED               125     
-#define INPUT_MOTOR_REVERSE_SPEED      -100   
+// VELOCITY CONTROL SPEEDS (RPM) - maintains full torque at all speeds
+// Using move_velocity() function for precise speed control with full torque capability
+// Motor controller automatically adjusts voltage to maintain target RPM
 
-// FRONT INDEXER speeds (optimized per user request)
-#define LEFT_INDEXER_FRONT_COLLECTION_SPEED     -100     // 100% power for collection
-#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED        80     // 50% power for mid back
-#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED       -100     // 100% power for mid front (used for front top scoring)
+// Maximum RPM for 11W motors with 6:1 blue gearing is approximately ±600 RPM
+// These values are tuned for optimal ball handling performance
+
+// INPUT MOTOR (intake) speeds  
+#define INPUT_MOTOR_SPEED               550     // RPM - high speed for effective intake
+#define INPUT_MOTOR_REVERSE_SPEED      -300    // RPM - reverse for low goal scoring
+
+// FRONT INDEXER speeds (velocity control maintains torque at all speeds)
+#define LEFT_INDEXER_FRONT_COLLECTION_SPEED     -550    // RPM - controlled speed with full torque
+#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED        300    // RPM - precise speed for mid goal
+#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED       -350    // RPM - higher speed for top scoring
 
 // BACK INDEXER speeds (when left indexer helps back scoring)
-#define LEFT_INDEXER_BACK_COLLECTION_SPEED       63     // Back collection helper
-#define LEFT_INDEXER_BACK_MID_GOAL_SPEED        -80     // Back mid goal helper
-#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED       80      // Back immediate helper
-#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED        -100     // Back top goal helper 
-#define RIGHT_INDEXER_COLLECTION_SPEED         -100    // Back collection mode
-#define RIGHT_INDEXER_MID_GOAL_SPEED           100     // Back mid goal mode  
-#define RIGHT_INDEXER_IMMEDIATE_SPEED          -125    // Back immediate mode
-#define RIGHT_INDEXER_TOP_GOAL_SPEED           -127    // Back top goal mode
+#define LEFT_INDEXER_BACK_COLLECTION_SPEED       150     // RPM - helper speed with full torque
+#define LEFT_INDEXER_BACK_MID_GOAL_SPEED        -550     // RPM - mid goal helper with full torque
+#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED       400      // RPM - immediate mode helper
+#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED        -350     // RPM - top goal helper with full torque
+#define RIGHT_INDEXER_COLLECTION_SPEED         -350     // RPM - back collection mode
+#define RIGHT_INDEXER_MID_GOAL_SPEED           500      // RPM - back mid goal mode  
+#define RIGHT_INDEXER_IMMEDIATE_SPEED          -400     // RPM - back immediate mode
+#define RIGHT_INDEXER_TOP_GOAL_SPEED           -550     // RPM - back top goal mode (high speed)
+#define RIGHT_INDEXER_TOP_GOAL_HELPER_SPEED    -350     // RPM - slower feeding speed with full torque
 
 // TOP INDEXER speeds
-#define TOP_INDEXER_FRONT_SPEED                125    // Top indexer when scoring front
-#define TOP_INDEXER_BACK_SPEED                -125    // Top indexer when scoring back (opposite)
+#define TOP_INDEXER_FRONT_SPEED                400      // RPM - front scoring speed
+#define TOP_INDEXER_BACK_SPEED                -400      // RPM - back scoring speed (opposite)
 
 // STORAGE MODE speeds - for moving balls from top storage toward goals
-#define TOP_INDEXER_STORAGE_TO_FRONT_SPEED     125     // Top indexer moves balls from storage toward front goal (max speed)
-#define TOP_INDEXER_STORAGE_TO_BACK_SPEED     -125     // Top indexer moves balls from storage toward back goal (max speed)
-#define FRONT_INDEXER_STORAGE_SPEED            100     // Front indexer moves balls back from storage
+#define TOP_INDEXER_STORAGE_TO_FRONT_SPEED     200      // RPM - storage to front with full torque
+#define TOP_INDEXER_STORAGE_TO_BACK_SPEED     -200      // RPM - storage to back with full torque
+
+// LEFT INDEXER speeds when scoring FROM storage (opposite of collection direction)
+#define LEFT_INDEXER_STORAGE_TO_FRONT_SPEED    300      // RPM - help move balls from storage toward front
+#define LEFT_INDEXER_STORAGE_TO_BACK_SPEED     550      // RPM - help move balls from storage toward back
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION

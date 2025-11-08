@@ -21,6 +21,7 @@
 #include "intake.h"
 #include "autonomous.h"
 #include "lemlib_config.h"
+#include "color_sensor.h"
 
 // Global robot subsystems (pointers to avoid early construction)
 pros::Controller* master = nullptr;
@@ -63,6 +64,14 @@ void initializeGlobalSubsystems() {
     indexer_system = new IndexerSystem(pto_system);
     intake_system = new Intake();
     autonomous_system = new AutonomousSystem(pto_system, indexer_system);
+    color_sensor_system = new ColorSensorSystem();
+    
+    // Initialize color sensor system with indexer reference
+    if (color_sensor_system->initialize(indexer_system)) {
+        printf("✅ Color sensor system initialized successfully\n");
+    } else {
+        printf("❌ Color sensor system initialization failed\n");
+    }
     
     // Engage PTO to lift middle wheels (reduces friction during testing)
     printf("Lifting middle wheels via PTO...\n");
@@ -394,6 +403,86 @@ void opcontrol() {
 		pto_system->update(*master);
 		indexer_system->update(*master);
 		intake_system->update(*master);  // Update intake system
+		
+		// Update color sensor system
+		if (color_sensor_system) {
+			color_sensor_system->update();
+			
+			// Handle color sorting controls
+			static bool prev_left_stick = false;
+			static bool prev_right_stick = false;
+			static bool prev_manual_eject = false;
+			static bool prev_sort_toggle = false;
+			static bool prev_l1_button = false;
+			static bool prev_l2_button = false;
+			
+			// Color mode selection using analog stick positions
+			int left_x = master->get_analog(COLOR_MODE_RED_BUTTON);   // Left stick X
+			int right_x = master->get_analog(COLOR_MODE_BLUE_BUTTON); // Right stick X
+			
+			bool left_stick_pressed = (left_x < -50);  // Left stick pushed left
+			bool right_stick_pressed = (right_x > 50); // Right stick pushed right
+			
+			// Set color sorting mode based on stick positions
+			if (left_stick_pressed && !prev_left_stick) {
+				color_sensor_system->setSortingMode(SortingMode::COLLECT_RED);
+				master->set_text(0, 0, "SORT: RED");
+				master->rumble(".");
+			} else if (right_stick_pressed && !prev_right_stick) {
+				color_sensor_system->setSortingMode(SortingMode::COLLECT_BLUE);
+				master->set_text(0, 0, "SORT: BLUE");
+				master->rumble(".");
+			}
+			
+			// Manual ejection trigger
+			bool manual_eject = master->get_digital(COLOR_MANUAL_EJECT_BUTTON);
+			if (manual_eject && !prev_manual_eject) {
+				color_sensor_system->triggerEjection();
+				master->set_text(1, 0, "MANUAL EJECT");
+				master->rumble("-");
+			}
+			
+			// Toggle sorting on/off
+			bool sort_toggle = master->get_digital(COLOR_SORT_TOGGLE_BUTTON);
+			if (sort_toggle && !prev_sort_toggle) {
+				if (color_sensor_system->getSortingMode() == SortingMode::COLLECT_ALL) {
+					color_sensor_system->setSortingMode(SortingMode::COLLECT_RED); // Default to red
+					master->set_text(0, 0, "SORT: ON");
+				} else {
+					color_sensor_system->setSortingMode(SortingMode::COLLECT_ALL);
+					master->set_text(0, 0, "SORT: OFF");
+				}
+				master->rumble("..");
+			}
+			
+			// Ejection duration tuning (L1/L2 buttons when not used for front loader)
+			bool l1_pressed = master->get_digital(pros::E_CONTROLLER_DIGITAL_L1);
+			bool l2_pressed = master->get_digital(pros::E_CONTROLLER_DIGITAL_L2);
+			
+			if (l1_pressed && !prev_l1_button) {
+				// Increase ejection duration by 50ms
+				uint32_t current_duration = color_sensor_system->getEjectionDuration();
+				color_sensor_system->setEjectionDuration(current_duration + 50);
+				master->set_text(1, 0, "EJECT: +50ms");
+				master->rumble(".");
+			} else if (l2_pressed && !prev_l2_button) {
+				// Decrease ejection duration by 50ms
+				uint32_t current_duration = color_sensor_system->getEjectionDuration();
+				if (current_duration > 50) {
+					color_sensor_system->setEjectionDuration(current_duration - 50);
+				}
+				master->set_text(1, 0, "EJECT: -50ms");
+				master->rumble(".");
+			}
+			
+			// Store previous states
+			prev_left_stick = left_stick_pressed;
+			prev_right_stick = right_stick_pressed;
+			prev_manual_eject = manual_eject;
+			prev_sort_toggle = sort_toggle;
+			prev_l1_button = l1_pressed;
+			prev_l2_button = l2_pressed;
+		}
 		
 		// Small delay to prevent overwhelming the system
 		pros::delay(20);  // 50Hz loop
