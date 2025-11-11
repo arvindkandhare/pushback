@@ -64,7 +64,7 @@
 
 // Front loader positions (in degrees - measured at the loader arm, not motor)
 #define FRONT_LOADER_RETRACTED_POSITION    0     // Retracted/stored position (vertical)
-#define FRONT_LOADER_DEPLOYED_POSITION    -66    // Deployed position (close to observed physical limit)
+#define FRONT_LOADER_DEPLOYED_POSITION    -60    // Deployed position (close to observed physical limit)
 
 // Front loader motor configuration
 #define FRONT_LOADER_MOTOR_SPEED          150    // Motor speed in RPM (increased for more responsive movement)
@@ -197,7 +197,7 @@
 // These values are tuned for optimal ball handling performance
 
 // INPUT MOTOR (intake) speeds  
-#define INPUT_MOTOR_SPEED               550     // RPM - high speed for effective intake
+#define INPUT_MOTOR_SPEED               1000     // RPM - high speed for effective intake
 #define INPUT_MOTOR_REVERSE_SPEED      -300    // RPM - reverse for low goal scoring
 
 // FRONT INDEXER speeds (velocity control maintains torque at all speeds)
