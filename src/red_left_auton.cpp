@@ -1,15 +1,35 @@
 #include "autonomous.h"
 #include "lemlib_config.h"
+#include "main.h"
 #include <utility>
 #include <cmath>  // For cos, sin functions
 
 ASSET(RedRightBallCollection_txt);
 ASSET(RedRightBallScore_txt);
 ASSET(RedRightMoveToGoal_txt);
+ASSET(RedRightMoveToMatchLoad_txt);
+
+ASSET(RedRightMoveToGoalPart1V2_txt);
+ASSET(RedRightMoveToGoalPart2V2_txt);
+
+ASSET(RedRightMoveToLongGoal_txt);
+
+void stopIntakeAfterDelay() {
+    chassis_turn->waitUntilDone();
+    pros::delay(1000);
+    indexer_system->stopAll();
+}
+
+void midScoreAfterDelay() {
+        chassis_turn->waitUntilDone();
+        //pros::delay(400);
+        indexer_system->setMidGoalMode();
+        indexer_system->executeBack();
+        
+}
 
 void AutonomousSystem::executeRedRightAWP() {
 
-    
     printf("Executing Red Left AWP Route (Mirrored from proven Red Right route)\n");
     autonomous_running = true;
 
@@ -22,24 +42,115 @@ void AutonomousSystem::executeRedRightAWP() {
         pros::delay(200);
     }   
 
-    chassis->setPose(-52, -6, 90);
-    
+    chassis->setPose(-47, -12, 90);
+    indexer_system->closeFrontFlap();
     indexer_system->startInput();
-    chassis->follow(RedRightBallCollection_txt, 15, 2000);
-    chassis->waitUntilDone();
-    indexer_system->stopAll();
-    chassis->turnToHeading(182, 1000, {.maxSpeed=120,.minSpeed=100, .earlyExitRange=10});
-    chassis->follow(RedRightBallScore_txt, 8, 2000, false);
-    chassis->waitUntilDone();
-    //chassis->cancelAllMotions();
+    chassis_turn->follow(RedRightBallCollection_txt, 8, 3000);
+    
+    pros::Task intakeTask(stopIntakeAfterDelay);
+    //chassis_turn->waitUntilDone();
+        //pros::delay(200);
+    //indexer_system->stopAll();
+    chassis_turn->turnToHeading(180, 1000, {.maxSpeed=120,.minSpeed=100, .earlyExitRange=10});
+    
+    
+    
+    chassis_turn->follow(RedRightBallScore_txt, 12, 1650, false);
+    //pros::Task scoreTask(midScoreAfterDelay);
+
+    chassis_turn->waitUntilDone();
+
+
     indexer_system->setMidGoalMode();
     indexer_system->executeBack();
-    pros::delay(3000); // brief pause for scoring
+    pros::delay(2000);
+
+
+    //Deploy matchloader
+    //chassis_turn->follow(RedRightMoveToGoal_txt, 10, 10000, true);
+    chassis_turn->follow(RedRightMoveToGoalPart1V2_txt, 16, 6000, true);
+    
+    //chassis_turn->follow(RedRightMoveToGoalPart2V2_txt, 8, 6000, true);
+    
+    chassis_turn->waitUntilDone();
+    
+    chassis_turn->turnToHeading(-90, 2000, {.maxSpeed=80});
     indexer_system->stopAll();
+    intake_system->deploy();
+    pros::delay(100);
+    //indexer_system->startInput();
+    indexer_system->startIntakeAndStorage();
+    chassis_turn->follow(RedRightMoveToMatchLoad_txt, 16, 4000, true);
+    
+    //chassis->moveToPose(-65, chassis->getPose().y, chassis->getPose().theta, 5000,{.maxSpeed=100,.minSpeed=80});   
+    chassis_turn->waitUntilDone();
+    pros::delay(1500);
+    
+    chassis_turn->follow(RedRightMoveToLongGoal_txt, 16, 4000, false);
+    
+    //chassis->moveToPose(-25, -51, -90, 5000,{.forwards=false,.minSpeed=120});
+    
+
+
+    indexer_system->setTopGoalMode();
+    indexer_system->toggleStorageMode();
+    indexer_system->executeBack();
+    
+    //Move into matchloader
+    // brief pause for scoring
+
+    //chassis_turn->setPose(-52, -6, 90);
+    //Set intial position
+    /*
+    
+    //Intake first 3 balls
+    
+    
+    
+    
+    chassis->waitUntilDone();
+    //Move to middle goal
+
+
+    indexer_system->setMidGoalMode();
+    indexer_system->executeBack();
+    pros::delay(2500); // brief pause for scoring
+    //pros::delay(3000); // brief pause for scoring
+    //Score on middle goal
+
+
+    indexer_system->stopAll();
+    intake_system->deploy();
+    //Deploy matchloader
     chassis->follow(RedRightMoveToGoal_txt, 8, 2000, true);
     chassis->waitUntilDone();
-    chassis->turnToHeading(270, 300, {.maxSpeed=120, .minSpeed=100, .earlyExitRange=3});
-    chassis->moveToPose(-65, -47, 270, 5000,{.maxSpeed=120,.minSpeed=100});
+    //Move to match load
+
+
+    
+
+    chassis_turn->turnToHeading(270, 300, {.maxSpeed=120, .minSpeed=100, .earlyExitRange=3});
+    indexer_system->startInput();
+    chassis->moveToPose(-65, -47, 270, 5000,{.maxSpeed=120,.minSpeed=100});   
+    //Move into matchloader
+
+    pros::delay(3000); 
+
+
+
+    
+
+
+    //TODO
+    //Get the straight pid different from the turn pid
+    //Get the threading working
+    //Get the intake methods working where I can spin the top intake slowly
+    //Make it so that the pure pursuit can speed up and slow down
+    //
+    
+    
+    */
+    
     /*
     // Set starting pose for LEFT side (mirror of Red Right's 60°)
     chassis->setPose(0, 0, 120);  // 120° = northwest direction (mirror of 60°)

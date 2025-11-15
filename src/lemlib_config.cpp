@@ -65,6 +65,7 @@ pros::Imu* inertial_sensor = nullptr;
 // PID Controllers (initialized in initializeLemLib())
 lemlib::ControllerSettings* linear_controller = nullptr;
 lemlib::ControllerSettings* angular_controller = nullptr;
+lemlib::ControllerSettings* angular_drive_Controller = nullptr;
 lemlib::ControllerSettings* angular_turn_controller = nullptr;
 lemlib::ControllerSettings* angular_short_turn_controller = nullptr;
 // =============================================================================
@@ -217,6 +218,20 @@ void initializeLemLib() {
         TURN_SLEW              // 0 - maxSpeed (slew)
     );
 
+    // angular motion controller
+    angular_drive_Controller = new lemlib::ControllerSettings (
+        1, // proportional gain (kP)
+        0, // integral gain (kI)
+        4, // derivative gain (kD)
+        0, // anti windup
+        0.2, // small error range, in degrees
+        10, // small error range timeout, in milliseconds
+        0.75, // large error range, in degrees
+        50, // large error range timeout, in milliseconds
+        0 // maximum acceleration (slew)
+    );
+
+
     // =============================================================================
     // INITIALIZE DRIVE CURVES
     // =============================================================================
@@ -274,15 +289,17 @@ void initializeLemLib() {
     // LemLib chassis object - EXACT match to working code including drive curves
     chassis = new lemlib::Chassis(*drivetrain,
                                  *linear_controller,
-                                 *angular_controller,
+                                 *angular_drive_Controller,
                                  *odometry_sensors,
                                  throttleCurve,
                                  steerCurve);
 
+    
+
     // Additional chassis objects for different turn scenarios (like working_code.txt)
     chassis_turn = new lemlib::Chassis(*drivetrain,
                                       *linear_controller, 
-                                      *angular_turn_controller,
+                                      *angular_controller,
                                       *odometry_sensors,
                                       throttleCurve,
                                       steerCurve);
