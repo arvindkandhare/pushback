@@ -35,10 +35,6 @@
 #define HORIZONTAL_ENCODER_PORT 10  // Horizontal tracking wheel encoder  
 #define GYRO_PORT              13   // Inertial sensor for heading
 
-// Color sensing and sorting system
-#define COLOR_SENSOR_1_PORT     5   // First color sensor (entry detection)
-#define COLOR_SENSOR_2_PORT     11  // Second color sensor (confirmation/direction)
-
 // =============================================================================
 // ADI PORTS - Sensors and Legacy Devices
 // =============================================================================
@@ -148,8 +144,8 @@
 #define PTO_RETRACTED   true  // Retracted = scorer mode (2-wheel drive, middle wheels for scorer)
 
 // Front flap pneumatic states
-#define FRONT_FLAP_OPEN   false  // Open = balls can score through front (reversed due to wiring)
-#define FRONT_FLAP_CLOSED true   // Closed = balls held against flap (reversed due to wiring)
+#define FRONT_FLAP_OPEN   true  // Open = balls can score through front (reversed due to wiring)
+#define FRONT_FLAP_CLOSED false   // Closed = balls held against flap (reversed due to wiring)
 
 // Default PTO state on robot startup
 #define PTO_DEFAULT_STATE PTO_EXTENDED
@@ -200,34 +196,30 @@
 #define INPUT_MOTOR_SPEED               1000     // RPM - high speed for effective intake
 #define INPUT_MOTOR_REVERSE_SPEED      -300    // RPM - reverse for low goal scoring
 
-// FRONT INDEXER speeds (velocity control maintains torque at all speeds)
-#define LEFT_INDEXER_FRONT_COLLECTION_SPEED     -550    // RPM - controlled speed with full torque
-#define LEFT_INDEXER_FRONT_MID_GOAL_SPEED        300    // RPM - precise speed for mid goal
-#define LEFT_INDEXER_FRONT_TOP_GOAL_SPEED       -350    // RPM - higher speed for top scoring
+// LEFT INDEXER speeds (middle left wheel via PTO)
+// Format: LEFT_<IN/OUT>_<FAST/SLOW>
+// IN = toward robot center/storage (positive), OUT = toward front goal (negative)
+#define LEFT_IN_FAST      -550     // RPM - fast movement toward storage
+#define LEFT_IN_SLOW      -150     // RPM - slow/helper movement toward storage
+#define LEFT_OUT_FAST    550     // RPM - fast movement toward front goal
+#define LEFT_OUT_SLOW    350     // RPM - slow movement toward front goal
+#define LEFT_OUT_MID     300     // RPM - medium speed toward front goal (for storage to front mid/low goal)
+#define LEFT_OUT_VSLOW   275     // RPM - very slow for smooth storage feeding
+#define LEFT_IN_MID       -300     // RPM - medium speed toward storage (for non-storage front mid goal)
 
-// BACK INDEXER speeds (when left indexer helps back scoring)
-#define LEFT_INDEXER_BACK_COLLECTION_SPEED       150     // RPM - helper speed with full torque
-#define LEFT_INDEXER_BACK_MID_GOAL_SPEED        -550     // RPM - mid goal helper with full torque
-#define LEFT_INDEXER_BACK_IMMEDIATE_SPEED       400      // RPM - immediate mode helper
-#define LEFT_INDEXER_BACK_TOP_GOAL_SPEED        -350     // RPM - top goal helper with full torque
-#define RIGHT_INDEXER_COLLECTION_SPEED         -350     // RPM - back collection mode
-#define RIGHT_INDEXER_MID_GOAL_SPEED           500      // RPM - back mid goal mode  
-#define RIGHT_INDEXER_IMMEDIATE_SPEED          -400     // RPM - back immediate mode
-#define RIGHT_INDEXER_TOP_GOAL_SPEED           -550     // RPM - back top goal mode (high speed)
-#define RIGHT_INDEXER_TOP_GOAL_HELPER_SPEED    -350     // RPM - slower feeding speed with full torque
+// RIGHT INDEXER speeds (middle right wheel via PTO)
+// Format: RIGHT_<IN/OUT>_<FAST/SLOW>
+// IN = toward robot center/storage (negative), OUT = toward back goal (positive)
+#define RIGHT_IN_FAST    -350     // RPM - fast movement toward storage
+#define RIGHT_IN_SLOW    -400     // RPM - medium movement toward storage
+#define RIGHT_OUT_FAST    500     // RPM - fast movement toward back goal
+#define RIGHT_OUT_SLOW    300     // RPM - slow movement toward back goal (helper speed)
+#define RIGHT_OUT_BOOST   550     // RPM - extra fast for back top goal storage (500 * 1.1)
 
 // TOP INDEXER speeds
-#define TOP_INDEXER_FRONT_SPEED                400      // RPM - front scoring speed
-#define TOP_INDEXER_BACK_SPEED                -400      // RPM - back scoring speed (opposite)
-
-// STORAGE MODE speeds - for moving balls from top storage toward goals
-#define TOP_INDEXER_STORAGE_TO_FRONT_SPEED     200      // RPM - storage to front with full torque
-#define TOP_INDEXER_STORAGE_TO_BACK_SPEED     -200      // RPM - storage to back with full torque
-
-// LEFT INDEXER speeds when scoring FROM storage (opposite of collection direction)
-// NOTE: FRONT storage now uses LEFT_INDEXER_FRONT_COLLECTION_SPEED for consistent direction
-// #define LEFT_INDEXER_STORAGE_TO_FRONT_SPEED    300      // RPM - UNUSED: help move balls from storage toward front
-#define LEFT_INDEXER_STORAGE_TO_BACK_SPEED     550      // RPM - help move balls from storage toward back
+#define TOP_INDEXER_FRONT_SPEED               400      // RPM - front scoring speed (negative = toward front)
+#define TOP_INDEXER_BACK_SPEED                400      // RPM - back scoring speed (positive = toward back)
+#define TOP_INDEXER_STORAGE_INTAKE_SPEED       60      // RPM - intake to storage speed (negative = toward front/storage)
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION

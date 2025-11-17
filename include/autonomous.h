@@ -138,16 +138,10 @@ public:
      * Get the autonomous selector for external access
      */
     AutoSelector& getSelector();
-    
-    /**
-     * Testing and calibration functions (LemLib wrappers)
-     */
-    void testStraightDrive(double distance = 18.0);
-    void testTurnAccuracy(double angle = 90.0);
-    void testPointToPoint();
-    void testOdometryAccuracy();
-    void testMotorIdentification();
-    void testColorSorter();
 };
+
+// External test function (defined in system_tests.cpp)
+// All individual test functions are internal to system_tests.cpp
+void runTest(AutoMode mode, lemlib::Chassis* chassis);
 
 #endif // _AUTONOMOUS_H_

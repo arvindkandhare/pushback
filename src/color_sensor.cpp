@@ -26,6 +26,8 @@ ColorSensorSystem::ColorSensorSystem() {
     // Initialize state variables
     current_mode = SortingMode::COLLECT_ALL;
     last_detected_color = BallColor::UNKNOWN;
+    sensor1_confirmed_color = BallColor::UNKNOWN;
+    sensor2_confirmed_color = BallColor::UNKNOWN;
     last_direction = BallDirection::UNKNOWN;
     sensor1_triggered = false;
     sensor2_triggered = false;
@@ -115,9 +117,25 @@ bool ColorSensorSystem::initialize(IndexerSystem* indexer_ref) {
         printf("📊 Sensor 1 proximity: %.2f\n", prox1);
         printf("📊 Sensor 2 proximity: %.2f\n", prox2);
         
+        // IMPORTANT: Set integration time for better color detection
+        // Integration time affects how long the sensor samples light
+        // Values: 3ms, 6ms, 10ms, 25ms, 50ms, 100ms, 150ms, 200ms, 300ms, 400ms, 500ms, 600ms
+        // Higher values = more sensitive but slower response
+        sensor1->set_integration_time(50); // 50ms integration time
+        sensor2->set_integration_time(50); // 50ms integration time
+        
         // Set LED brightness for better color detection
         sensor1->set_led_pwm(100); // 100% LED brightness
         sensor2->set_led_pwm(100); // 100% LED brightness
+        
+        // Give sensors a moment to apply settings
+        pros::delay(100);
+        
+        // Test brightness after setting up
+        double bright1 = sensor1->get_brightness();
+        double bright2 = sensor2->get_brightness();
+        printf("📊 After LED setup - Sensor 1 brightness: %.2f%%\n", bright1);
+        printf("📊 After LED setup - Sensor 2 brightness: %.2f%%\n", bright2);
         
         printf("✅ Color sensor system initialized successfully\n");
         printf("🎯 Default mode: %s\n", sortingModeToString(current_mode));
@@ -150,6 +168,7 @@ void ColorSensorSystem::update() {
         // Ball just entered sensor 1
         sensor1_triggered = true;
         sensor1_trigger_time = current_time;
+        sensor1_confirmed_color = BallColor::UNKNOWN; // Reset for new ball
         printf("🔍 Ball detected at sensor 1\n");
     } else if (!sensor1_has_ball && sensor1_triggered) {
         // Ball just left sensor 1
@@ -162,6 +181,7 @@ void ColorSensorSystem::update() {
         // Ball just entered sensor 2
         sensor2_triggered = true;
         sensor2_trigger_time = current_time;
+        sensor2_confirmed_color = BallColor::UNKNOWN; // Reset for new ball
         printf("🔍 Ball detected at sensor 2\n");
     } else if (!sensor2_has_ball && sensor2_triggered) {
         // Ball just left sensor 2
@@ -175,7 +195,7 @@ void ColorSensorSystem::update() {
         BallColor confirmed_color1 = addToColorBuffer(1, color1);
         
         if (confirmed_color1 != BallColor::UNKNOWN && confirmed_color1 != BallColor::NO_BALL) {
-            last_detected_color = confirmed_color1;
+            sensor1_confirmed_color = confirmed_color1;
             
             // Update statistics
             if (confirmed_color1 == BallColor::RED) {
@@ -184,7 +204,7 @@ void ColorSensorSystem::update() {
                 blue_balls_detected++;
             }
             
-            printf("🎨 Ball color confirmed: %s\n", colorToString(confirmed_color1));
+            printf("🎨 Sensor 1 confirmed: %s\n", colorToString(confirmed_color1));
         }
     }
     
@@ -193,12 +213,26 @@ void ColorSensorSystem::update() {
         BallColor confirmed_color2 = addToColorBuffer(2, color2);
         
         if (confirmed_color2 != BallColor::UNKNOWN && confirmed_color2 != BallColor::NO_BALL) {
-            // Double-check color consistency
-            if (last_detected_color != BallColor::UNKNOWN && 
-                confirmed_color2 != last_detected_color) {
-                printf("⚠️ Color mismatch between sensors: %s vs %s\n", 
-                       colorToString(last_detected_color), colorToString(confirmed_color2));
-                false_detections++;
+            sensor2_confirmed_color = confirmed_color2;
+            printf("🎨 Sensor 2 confirmed: %s\n", colorToString(confirmed_color2));
+            
+            // Check if both sensors agree on the color
+            if (sensor1_confirmed_color != BallColor::UNKNOWN && 
+                sensor2_confirmed_color != BallColor::UNKNOWN) {
+                
+                if (sensor1_confirmed_color == sensor2_confirmed_color) {
+                    // Both sensors agree - this is our confirmed ball color
+                    last_detected_color = sensor2_confirmed_color;
+                    printf("✅ BOTH SENSORS AGREE: %s ball confirmed!\n", 
+                           colorToString(last_detected_color));
+                } else {
+                    // Sensors disagree - log the mismatch
+                    printf("⚠️ COLOR MISMATCH: Sensor1=%s, Sensor2=%s - IGNORING\n", 
+                           colorToString(sensor1_confirmed_color), 
+                           colorToString(sensor2_confirmed_color));
+                    false_detections++;
+                    // Don't set last_detected_color - wait for agreement
+                }
             }
         }
     }
@@ -387,8 +421,16 @@ BallColor ColorSensorSystem::readColorFromSensor(pros::Optical* sensor) {
     try {
         double proximity = sensor->get_proximity();
         
-        // Check if ball is present
-        if (proximity > MAX_PROXIMITY_THRESHOLD) {
+        // Check if ball is present - optical sensors return HIGH proximity when object is CLOSE
+        if (proximity < MIN_PROXIMITY_THRESHOLD) {
+            // No ball detected - only log occasionally to avoid spam
+            static uint32_t last_no_ball_log = 0;
+            uint32_t current_time = pros::millis();
+            if (current_time - last_no_ball_log > 5000) { // Log every 5 seconds
+                printf("🔍 No ball: proximity=%.1f (threshold=%d)\n", 
+                       proximity, MIN_PROXIMITY_THRESHOLD);
+                last_no_ball_log = current_time;
+            }
             return BallColor::NO_BALL;
         }
         
@@ -396,19 +438,28 @@ BallColor ColorSensorSystem::readColorFromSensor(pros::Optical* sensor) {
         double saturation = sensor->get_saturation();
         double brightness = sensor->get_brightness();
         
+        // Log sensor readings when ball is detected
+        printf("📊 Sensor: prox=%.1f, hue=%.1f°, sat=%.1f%%, bright=%.1f%%\n",
+               proximity, hue, saturation, brightness);
+        
         // Check minimum thresholds for valid color detection
         if (saturation < MIN_SATURATION || brightness < MIN_BRIGHTNESS) {
+            printf("⚠️ Color rejected: sat/bright too low (min sat=%d, min bright=%d)\n",
+                   MIN_SATURATION, MIN_BRIGHTNESS);
             return BallColor::UNKNOWN;
         }
         
         // Determine color based on hue
         if ((hue >= RED_HUE_MIN && hue <= RED_HUE_MAX) || 
             (hue >= RED_HUE_HIGH_MIN && hue <= RED_HUE_HIGH_MAX)) {
+            printf("🔴 RED ball detected!\n");
             return BallColor::RED;
         } else if (hue >= BLUE_HUE_MIN && hue <= BLUE_HUE_MAX) {
+            printf("🔵 BLUE ball detected!\n");
             return BallColor::BLUE;
         }
         
+        printf("⚠️ Color UNKNOWN: hue %.1f° doesn't match red or blue ranges\n", hue);
         return BallColor::UNKNOWN;
         
     } catch (const std::exception& e) {
@@ -422,7 +473,8 @@ bool ColorSensorSystem::isBallPresent(pros::Optical* sensor) {
     
     try {
         double proximity = sensor->get_proximity();
-        return proximity <= MAX_PROXIMITY_THRESHOLD;
+        // Optical sensors return HIGH proximity when object is CLOSE
+        return proximity >= MIN_PROXIMITY_THRESHOLD;
     } catch (const std::exception& e) {
         return false;
     }
@@ -565,6 +617,8 @@ void ColorSensorSystem::resetDetectionState() {
     
     // Reset color detection
     last_detected_color = BallColor::UNKNOWN;
+    sensor1_confirmed_color = BallColor::UNKNOWN;
+    sensor2_confirmed_color = BallColor::UNKNOWN;
     last_direction = BallDirection::UNKNOWN;
     
     // Clear color confirmation buffers

@@ -32,13 +32,13 @@ class IndexerSystem;
 #define BLUE_HUE_MIN            200   // Blue hue range minimum  
 #define BLUE_HUE_MAX            250   // Blue hue range maximum
 
-#define MIN_SATURATION          50    // Minimum saturation for valid color detection
-#define MIN_BRIGHTNESS          30    // Minimum brightness for valid detection
-#define MAX_PROXIMITY_THRESHOLD 100   // Maximum proximity value indicating ball presence
+#define MIN_SATURATION          0     // Minimum saturation for valid color detection (DISABLED - sensor not seeing color)
+#define MIN_BRIGHTNESS          0     // Minimum brightness for valid detection (DISABLED - sensor LEDs appear off)
+#define MIN_PROXIMITY_THRESHOLD 100   // Minimum proximity value indicating ball presence (sensors return HIGH when object is CLOSE)
 
 // Detection timing and confirmation settings
 #define COLOR_DETECTION_DELAY_MS    50    // Delay between sensor readings (ms)
-#define COLOR_CONFIRMATION_COUNT    3     // Number of consistent readings required
+#define COLOR_CONFIRMATION_COUNT    5     // Number of consistent readings required (INCREASED for more reliable detection)
 #define BALL_PASSAGE_TIMEOUT_MS     2000  // Max time for ball to pass between sensors
 #define BALL_DIRECTION_TIMEOUT_MS   1000  // Max time between sensor triggers for direction
 
@@ -112,6 +112,8 @@ private:
     // System state
     SortingMode current_mode;        // Current sorting mode
     BallColor last_detected_color;   // Last detected ball color
+    BallColor sensor1_confirmed_color; // Confirmed color from sensor 1
+    BallColor sensor2_confirmed_color; // Confirmed color from sensor 2
     BallDirection last_direction;    // Last detected ball direction
     bool sensor1_triggered;          // Is sensor 1 currently detecting a ball
     bool sensor2_triggered;          // Is sensor 2 currently detecting a ball

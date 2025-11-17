@@ -53,7 +53,7 @@ void test_runRightIndexer_function() {
     printf("This simulates what happens when you do top back scoring...\n");
     
     // Simulate the exact code from runRightIndexer()
-    int speed = -127; // Same as RIGHT_INDEXER_TOP_GOAL_SPEED
+    int speed = -127; // Example speed for testing (similar to old RIGHT_INDEXER speeds)
     printf("Creating motor object with RIGHT_MIDDLE_MOTOR_PORT (%d)...\n", RIGHT_MIDDLE_MOTOR_PORT);
     
     pros::Motor right_middle(RIGHT_MIDDLE_MOTOR_PORT, pros::v5::MotorGears::blue);
