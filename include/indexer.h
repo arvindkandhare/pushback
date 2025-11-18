@@ -64,12 +64,7 @@ private:
     uint32_t scoring_start_time;    ///< Time when scoring sequence started
     uint32_t input_start_time;      ///< Time when input motor started
     bool input_motor_active;        ///< True when input motor is running
-    bool score_from_top_storage;    ///< True when scoring from top storage is enabled
     bool front_flap_open;           ///< True when front flap is open (manual tracking)
-    
-    // Storage ball management
-    int storage_ball_count;         ///< Current number of balls in storage (max 3)
-    static const int MAX_STORAGE_BALLS = 3;  ///< Maximum balls allowed in storage
     
     // Button state tracking (for edge detection)
     bool last_collection_button;
@@ -78,7 +73,6 @@ private:
     bool last_top_goal_button;
     bool last_front_execute_button;
     bool last_back_execute_button;
-    bool last_storage_toggle_button;
     bool last_front_flap_toggle_button;  ///< For direct front flap control
 
     // Display management
@@ -239,47 +233,6 @@ public:
      * Stop right indexer motor - for testing only
      */
     void stopRightIndexer();
-
-    /**
-     * Toggle score from top storage mode on/off
-     */
-    void toggleStorageMode();
-
-    /**
-     * Get current storage ball count
-     * @return Number of balls currently in storage (0-3)
-     */
-    int getStorageBallCount() const;
-
-    /**
-     * Check if storage is full
-     * @return True if storage has reached maximum capacity (3 balls)
-     */
-    bool isStorageFull() const;
-
-    /**
-     * Add a ball to storage count (used when ball enters storage)
-     * @return True if ball was added, false if storage is full
-     */
-    bool addBallToStorage();
-
-    /**
-     * Remove a ball from storage count (used when ball leaves storage for scoring)
-     * @return True if ball was removed, false if storage was already empty
-     */
-    bool removeBallFromStorage();
-
-    /**
-     * Reset storage ball count to zero
-     */
-    void resetStorageBallCount();
-    bool isStorageModeActive() const;
-
-    /**
-     * Verify PTO is in correct mode for storage operations
-     * @return True if PTO is ready for storage operations
-     */
-    bool verifyPTOForStorage();
 
 private:
     /**

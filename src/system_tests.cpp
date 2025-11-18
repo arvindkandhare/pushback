@@ -286,7 +286,7 @@ static void testColorSorter() {
     
     // Reset statistics for clean test
     color_sensor_system->resetStatistics();
-    indexer_system->resetStorageBallCount();
+    // indexer_system->resetStorageBallCount(); // Removed - storage counting no longer exists
     
     // Set to COLLECT_ALL mode initially (test detection and counters first)
     color_sensor_system->setSortingMode(SortingMode::COLLECT_ALL);
@@ -344,8 +344,9 @@ static void testColorSorter() {
         // Display statistics periodically (every 2 seconds)
         static uint32_t last_stats_time = 0;
         if (pros::millis() - last_stats_time > 2000) {
-            printf("📊 Storage: %d/3 balls\n\n", 
-                   indexer_system->getStorageBallCount());
+            // printf("📊 Storage: %d/3 balls\n\n", 
+            //        indexer_system->getStorageBallCount()); // Removed - storage counting no longer exists
+            printf("📊 Systems running\n\n");
             last_stats_time = pros::millis();
         }
         
@@ -354,8 +355,8 @@ static void testColorSorter() {
     
     // Print final statistics
     printf("\n📊 FINAL TEST STATISTICS:\n");
-    printf("Final storage: %d/3 balls\n", 
-           indexer_system->getStorageBallCount());
+    // printf("Final storage: %d/3 balls\n", 
+    //        indexer_system->getStorageBallCount()); // Removed - storage counting no longer exists
     
     master->set_text(0, 0, "Test Complete");
     master->set_text(1, 0, "");

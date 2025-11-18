@@ -40,8 +40,7 @@
 // =============================================================================
 
 // Front match loader encoder (VEX shaft encoder)
-#define FRONT_LOADER_ENCODER_TOP    'E'  // ADI port E 
-#define FRONT_LOADER_ENCODER_BOTTOM 'E'  // ADI port E (same port for shaft encoder)
+#define FRONT_LOADER_ENCODER_TOP    'E'  // ADI port E
 
 // =============================================================================
 
@@ -113,9 +112,6 @@
 // Front loader adjustment amount for L1/L2 buttons
 #define FRONT_LOADER_ADJUST_AMOUNT 5  // Degrees to adjust per button press (5 degrees = noticeable movement)
 
-// Storage scoring control - LEFT button
-#define STORAGE_TOGGLE_BUTTON     pros::E_CONTROLLER_DIGITAL_LEFT // Toggle score from top storage mode
-
 // Front flap direct control - RIGHT button
 #define FRONT_FLAP_TOGGLE_BUTTON  pros::E_CONTROLLER_DIGITAL_RIGHT // Toggle front flap open/closed
 
@@ -149,9 +145,6 @@
 
 // Default PTO state on robot startup
 #define PTO_DEFAULT_STATE PTO_EXTENDED
-
-// Default front flap state on robot startup
-#define FRONT_FLAP_DEFAULT_STATE FRONT_FLAP_CLOSED
 
 // =============================================================================
 // INTAKE MECHANISM CONFIGURATION (FRONT MATCH LOADER)
@@ -197,29 +190,15 @@
 #define INPUT_MOTOR_REVERSE_SPEED      -300    // RPM - reverse for low goal scoring
 
 // LEFT INDEXER speeds (middle left wheel via PTO)
-// Format: LEFT_<IN/OUT>_<FAST/SLOW>
-// IN = toward robot center/storage (positive), OUT = toward front goal (negative)
+// IN = toward robot center/storage, OUT = toward front goal
 #define LEFT_IN_FAST      -550     // RPM - fast movement toward storage
-#define LEFT_IN_SLOW      -150     // RPM - slow/helper movement toward storage
+#define LEFT_IN_MID       -300     // RPM - medium speed toward storage
 #define LEFT_OUT_FAST    550     // RPM - fast movement toward front goal
-#define LEFT_OUT_SLOW    350     // RPM - slow movement toward front goal
-#define LEFT_OUT_MID     300     // RPM - medium speed toward front goal (for storage to front mid/low goal)
-#define LEFT_OUT_VSLOW   275     // RPM - very slow for smooth storage feeding
-#define LEFT_IN_MID       -300     // RPM - medium speed toward storage (for non-storage front mid goal)
 
 // RIGHT INDEXER speeds (middle right wheel via PTO)
-// Format: RIGHT_<IN/OUT>_<FAST/SLOW>
-// IN = toward robot center/storage (negative), OUT = toward back goal (positive)
-#define RIGHT_IN_FAST    -350     // RPM - fast movement toward storage
-#define RIGHT_IN_SLOW    -400     // RPM - medium movement toward storage
-#define RIGHT_OUT_FAST    500     // RPM - fast movement toward back goal
-#define RIGHT_OUT_SLOW    300     // RPM - slow movement toward back goal (helper speed)
-#define RIGHT_OUT_BOOST   550     // RPM - extra fast for back top goal storage (500 * 1.1)
-
-// TOP INDEXER speeds
-#define TOP_INDEXER_FRONT_SPEED               400      // RPM - front scoring speed (negative = toward front)
-#define TOP_INDEXER_BACK_SPEED                400      // RPM - back scoring speed (positive = toward back)
-#define TOP_INDEXER_STORAGE_INTAKE_SPEED       60      // RPM - intake to storage speed (negative = toward front/storage)
+// IN = toward robot center/storage, OUT = toward back goal
+#define RIGHT_IN_FAST    350     // RPM - fast movement toward storage
+#define RIGHT_OUT_FAST   -500     // RPM - fast movement toward back goal
 
 // =============================================================================
 // AUTONOMOUS SYSTEM CONFIGURATION

@@ -260,16 +260,8 @@ void ColorSensorSystem::update() {
         if (!sensor2_triggered && sensor2_trigger_time > 0 && 
             (current_time - sensor2_trigger_time < 1000)) { // Within 1 second of leaving sensor 2
             
-            printf("✅ Desired color ball (%s) passed through - adding to storage\n", 
+            printf("✅ Desired color ball (%s) passed through and stored\n", 
                    colorToString(last_detected_color));
-            
-            // Add ball to storage count if indexer is available
-            if (indexer_system && !indexer_system->isStorageFull()) {
-                indexer_system->addBallToStorage();
-                printf("💾 Ball added to storage by color sensor system\n");
-            } else if (indexer_system && indexer_system->isStorageFull()) {
-                printf("⚠️ Storage full - desired ball cannot be stored\n");
-            }
             
             // Reset sensor 2 trigger time to prevent double-counting
             sensor2_trigger_time = 0;

@@ -93,7 +93,7 @@ void AutonomousSystem::executeRedRightAWP() {
 
 
     indexer_system->setTopGoalMode();
-    indexer_system->toggleStorageMode();
+    // indexer_system->toggleStorageMode(); // Removed - storage mode no longer exists
     indexer_system->executeBack();
     
     //Move into matchloader
