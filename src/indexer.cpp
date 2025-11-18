@@ -12,9 +12,8 @@
 #include <cstring>
 
 IndexerSystem::IndexerSystem(PTO* pto) 
-    : input_motor(INPUT_MOTOR_PORT, DRIVETRAIN_GEARSET),
-      top_indexer(TOP_INDEXER_PORT, DRIVETRAIN_GEARSET),
-      front_flap(FRONT_FLAP_PNEUMATIC, false),
+        : input_motor(INPUT_MOTOR_PORT, DRIVETRAIN_GEARSET),
+            front_flap(FRONT_FLAP_PNEUMATIC, false),
       pto_system(pto),
       current_mode(ScoringMode::TOP_GOAL),  // Start with TOP_GOAL mode for easy testing
       last_direction(ExecutionDirection::NONE),
@@ -35,8 +34,6 @@ IndexerSystem::IndexerSystem(PTO* pto)
     
     // Set motor brake modes for precise control
     input_motor.set_brake_mode(DRIVETRAIN_BRAKE_MODE);
-    top_indexer.set_brake_mode(DRIVETRAIN_BRAKE_MODE);
-    
     // Initialize display buffers
     strcpy(last_displayed_line0, "");
     strcpy(last_displayed_line1, ""); 
@@ -130,11 +127,10 @@ void IndexerSystem::executeFront() {
         }
             
         case ScoringMode::MID_GOAL:
-            // NEW DESIGN: Left indexer INWARDS, Input running, Top/Right stopped
-            printf("DEBUG: FRONT Mid Goal - Left INWARDS: %d, Input ON, Top/Right OFF\n", LEFT_IN_MID);
+            // Front mid goal mirrors storage with right side idle
+            printf("DEBUG: FRONT Mid Goal - Left INWARDS: %d, Input ON, Right OFF\n", LEFT_IN_MID);
             runLeftIndexer(LEFT_IN_MID); // INWARDS toward center
-            stopTopIndexer();  // Top indexer stopped
-            stopRightIndexer(); // Right indexer stopped
+            stopRightIndexer(); // Right indexer idle for front scoring
             startInput(); // Input motor runs
             break;
             
@@ -145,18 +141,16 @@ void IndexerSystem::executeFront() {
             closeFrontFlap(); // Close flap for low goal (opposite of front scoring)
             pros::delay(50);
             runLeftIndexer(LEFT_OUT_FAST); // OUTWARDS away from center (opposite of storage)
-            stopTopIndexer();  // Top indexer stopped
             stopRightIndexer(); // Right indexer stopped
             startInputReverse(); // Input motor in reverse
             break;
             
         case ScoringMode::TOP_GOAL:
-            // NEW DESIGN: Left indexer OUTWARDS, Input stopped, Top/Right stopped
-            printf("DEBUG: FRONT Top Goal - Left OUTWARDS: %d, Input OFF, Top/Right OFF\n", LEFT_OUT_FAST);
-            runLeftIndexer(LEFT_OUT_FAST); // OUTWARDS away from center
-            stopTopIndexer();  // Top indexer stopped
-            stopRightIndexer(); // Right indexer stopped
-            stopInput(); // Input motor stopped for top goal
+            // Front top should mirror storage flow but keep flap open for faster scoring
+            printf("DEBUG: FRONT Top Goal - Storage flow with flap open (Left IN: %d)\n", LEFT_IN_FAST);
+            startInput(); // Same intake behavior as storage
+            runLeftIndexer(LEFT_IN_FAST); // Feed balls inward toward storage/top
+            stopRightIndexer(); // Right indexer stays stopped (same as storage)
             break;
             
         case ScoringMode::NONE:
@@ -231,7 +225,6 @@ void IndexerSystem::executeBack() {
             printf("DEBUG: BACK Mid Goal - Storage mode + Right INWARDS: %d\n", RIGHT_IN_FAST);
             startInput(); // Input running (like storage)
             runLeftIndexer(LEFT_IN_FAST); // Left INWARDS (like storage)
-            stopTopIndexer(); // Top stopped (like storage)
             runRightIndexer(RIGHT_IN_FAST); // Right INWARDS (added for back mid)
             break;
             
@@ -240,7 +233,6 @@ void IndexerSystem::executeBack() {
             printf("DEBUG: BACK Low Goal (opposite of storage) - Input REVERSE, Left OUTWARDS\n");
             startInputReverse(); // Input reverse (opposite of storage)
             runLeftIndexer(LEFT_OUT_FAST); // Left OUTWARDS (opposite of storage)
-            stopTopIndexer(); // Top stopped (same as storage)
             stopRightIndexer(); // Right stopped (same as storage)
             break;
             
@@ -249,7 +241,6 @@ void IndexerSystem::executeBack() {
             printf("DEBUG: BACK Top Goal - Storage mode + Right OUTWARDS: %d\n", RIGHT_OUT_FAST);
             startInput(); // Input running (like storage)
             runLeftIndexer(LEFT_IN_FAST); // Left INWARDS (like storage)
-            stopTopIndexer(); // Top stopped (like storage)
             runRightIndexer(RIGHT_OUT_FAST); // Right OUTWARDS (added for back top)
             break;
             
@@ -358,15 +349,11 @@ void IndexerSystem::startIntakeAndStorage() {
     closeFrontFlap();
     printf("DEBUG: ✅ Front flap closed for storage\n");
     
-    // 4. NEW DESIGN: Top indexer does NOT move during storage
-    stopTopIndexer();
-    printf("DEBUG: ✅ Top indexer stopped (stationary during storage)\n");
-    
-    // 5. NEW DESIGN: Left indexer moves INWARDS (toward center/storage)
+    // 4. NEW DESIGN: Left indexer moves INWARDS (toward center/storage)
     runLeftIndexer(LEFT_IN_FAST);  // INWARDS toward storage
     printf("DEBUG: ✅ Left indexer moving INWARDS toward storage\n");
     
-    // 6. NEW DESIGN: Right indexer does NOT move during storage
+    // 5. NEW DESIGN: Right indexer does NOT move during storage
     stopRightIndexer();
     printf("DEBUG: ✅ Right indexer stopped (stationary during storage)\n");
     
@@ -406,7 +393,6 @@ void IndexerSystem::stopAll() {
     
     stopLeftIndexer();   // Stop left middle motor (front)
     stopRightIndexer();  // Stop right middle motor (back)
-    stopTopIndexer();    // Stop top indexer motor
     
     // IMPORTANT: Close front flap when stopping to hold balls
     closeFrontFlap();
@@ -536,7 +522,6 @@ void IndexerSystem::update(pros::Controller& controller) {
             // NEW DESIGN: LOW GOAL = Opposite of storage
             startInputReverse(); // Input REVERSE (opposite of storage)
             closeFrontFlap(); // Flap closed
-            stopTopIndexer(); // Top stopped (same as storage)
             runLeftIndexer(LEFT_OUT_FAST); // Left OUTWARDS (opposite of storage inwards)
             stopRightIndexer(); // Right stopped (same as storage)
             
@@ -921,22 +906,6 @@ void IndexerSystem::runRightIndexer(int speed) {
         printf("ERROR: right_middle_motor is null! LemLib not initialized?\n");
     }
 }
-
-void IndexerSystem::runTopIndexer(int speed) {
-    // Top indexer is shared between front top and back top scoring
-    printf("DEBUG: runTopIndexer() called with speed: %d RPM\n", speed);
-    
-    // Use velocity control (RPM) - maintains full torque at target speed
-    top_indexer.move_velocity(speed);
-    printf("DEBUG: Top indexer velocity control: %d RPM\n", speed);
-}
-
-void IndexerSystem::stopTopIndexer() {
-    // Stop the top indexer motor
-    printf("DEBUG: Stopping top indexer\n");
-    top_indexer.move_velocity(0);  // Stop using velocity control
-}
-
 
 void IndexerSystem::stopLeftIndexer() {
     // Stop LEFT middle wheel using existing motor object

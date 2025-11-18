@@ -244,7 +244,6 @@ static void testMotorIdentification() {
         {RIGHT_MIDDLE_MOTOR_PORT, "RIGHT MIDDLE", 50},
         {RIGHT_BACK_MOTOR_PORT, "RIGHT BACK", 50},
         {INPUT_MOTOR_PORT, "INPUT/INTAKE", 50},
-        {TOP_INDEXER_PORT, "TOP INDEXER", 50},
         {FRONT_LOADER_MOTOR_PORT, "FRONT LOADER", 50}
     };
     

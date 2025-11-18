@@ -41,7 +41,7 @@ The storage system now enforces a maximum of **3 balls** in storage at any time.
 - Intake motor: Forward (collecting balls)
 - Front roller (Left): -275 RPM (half of -550)
 - Back roller (Right): -350 RPM helper speed  
-- Top roller: 60 RPM (moderate speed to storage)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Front flap: Closed
 - PTO: Scorer mode
 
@@ -51,7 +51,7 @@ DEBUG: startIntakeAndStorage() - Face button pressed!
 DEBUG: ✅ PTO successfully switched to scorer mode
 DEBUG: ✅ Intake motor started
 DEBUG: ✅ Front flap closed for storage
-DEBUG: ✅ Top indexer moving balls to storage
+DEBUG: ✅ Left indexer moving INWARDS toward storage
 ```
 
 ### **Scenario 2: Front Collection from Storage**
@@ -62,7 +62,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: 200 RPM (storage to front speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Back roller (Right): -350 RPM (normal collection)
 - Intake motor: Forward
 
@@ -74,7 +74,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: -200 RPM (storage to back speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Back roller (Right): -350 RPM (collection speed)
 - Intake motor: Forward
 
@@ -86,7 +86,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: 200 RPM (storage to front speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Intake motor: REVERSE (essential for low goal scoring mechanism)
 
 **Note:** Intake reverse is required for low goal scoring - this is the correct behavior
@@ -99,7 +99,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: -200 RPM (storage to back speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Intake motor: REVERSE (essential for low goal scoring mechanism)
 
 **Note:** Intake reverse is required for low goal scoring - this is the correct behavior
@@ -112,7 +112,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: 200 RPM (storage to front speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Intake motor: Forward
 
 ### **Scenario 7: Back Mid Goal from Storage**
@@ -123,7 +123,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage)
-- Top roller: -200 RPM (storage to back speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Back roller (Right): 500 RPM (mid goal scoring)
 - Intake motor: Forward
 
@@ -136,7 +136,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 **Expected Behavior:**
 - Storage mode is **IGNORED** (ball is already at front top position)
 - Front roller (Left): -350 RPM (top goal speed)
-- Top roller: 400 RPM (front scoring speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Back roller (Right): -350 RPM (helper speed)
 - Intake motor: Forward
 
@@ -150,7 +150,7 @@ DEBUG: ✅ Top indexer moving balls to storage
 
 **Expected Behavior:**
 - Front roller (Left): -550 RPM (moving balls from storage toward back)
-- Top roller: -200 RPM (storage to back speed)
+- Storage feed: Intake-assisted (no dedicated roller)
 - Back roller (Right): -550 RPM (full speed for top goal scoring)
 - Intake motor: Forward
 

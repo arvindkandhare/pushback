@@ -27,7 +27,6 @@
 
 // Indexer and intake system motors
 #define INPUT_MOTOR_PORT        1   // 11W motor at bottom for ball intake
-#define TOP_INDEXER_PORT        8   // Top indexer motor (shared: front top OR back top)
 #define FRONT_LOADER_MOTOR_PORT 7   // Front match loader motor
 
 // Odometry and navigation sensors

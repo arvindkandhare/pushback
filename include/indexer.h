@@ -8,8 +8,8 @@
 #ifndef _INDEXER_H_
 #define _INDEXER_H_
 
-#include "api.h"
-#include "config.h"
+#include "pros/adi.hpp"
+#include "pros/motors.hpp"
 #include "pto.h"
 
 /**
@@ -47,7 +47,6 @@ class IndexerSystem {
 private:
     // Motors
     pros::Motor input_motor;        ///< 11W motor for ball intake at bottom
-    pros::Motor top_indexer;        ///< Top indexer motor (shared between front/back top scoring)
     
     // Pneumatic systems
     pros::adi::Pneumatics front_flap;  ///< Pneumatic control for front scoring flap
@@ -246,17 +245,6 @@ private:
      * @param speed Motor speed in RPM (positive or negative)
      */
     void runRightIndexer(int speed);
-
-    /**
-     * Run top indexer motor (shared for front/back top scoring)
-     * @param speed Motor speed in RPM (positive or negative)
-     */
-    void runTopIndexer(int speed);
-
-    /**
-     * Stop top indexer motor
-     */
-    void stopTopIndexer();
 
     /**
      * Format mode for compact display

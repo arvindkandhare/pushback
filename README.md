@@ -17,8 +17,8 @@ This document provides a complete reference for all controller button mappings a
 - **Intake System**: Pneumatic intake mechanism for collecting balls from tubes
 - **Color Sensors**: Dual optical sensors for automatic ball color detection
 - **Scoring System**: 
-  - **Front**: Left middle motor (via PTO) + pneumatic flap + top indexer motor (for top goals)
-  - **Back**: Right middle motor (via PTO) + top indexer motor (for top goals) - *Both motors reversed for proper direction*
+   - **Front**: Left middle motor (via PTO) + pneumatic flap (top goals use intake-assisted storage feed)
+   - **Back**: Right middle motor (via PTO) with intake-assisted feed for top goals - *Both motors reversed for proper direction*
   - **Storage**: Maximum 3 balls with automatic counting and color filtering
   - **Color Ejection**: Unwanted balls ejected via back mid goal
 
@@ -208,8 +208,8 @@ This document provides a complete reference for all controller button mappings a
 | Mid Goal | Back | A → R1 (toggle) | START/STOP right middle scoring |
 | Immediate | Front | B → R2 (toggle) | START/STOP left middle + intake |
 | Immediate | Back | B → R1 (toggle) | START/STOP right middle + intake |
-| Top Goal | Front | X → R2 (toggle) | START/STOP left middle + top indexer |
-| Top Goal | Back | X → R1 (toggle) | START/STOP right middle + top indexer |
+| Top Goal | Front | X → R2 (toggle) | START/STOP storage feed (intake + left middle) |
+| Top Goal | Back | X → R1 (toggle) | START/STOP storage feed + right middle |
 
 ### Intake Operation:
 | Function | Button | Result |

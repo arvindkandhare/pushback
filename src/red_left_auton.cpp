@@ -228,7 +228,7 @@ void AutonomousSystem::executeRedRightAWP() {
 
     pros::delay(50);
 
-    // TOP BACKSCORING - use back/top indexer (same as Red Right)
+    // TOP BACKSCORING - use back storage feed with right indexer (same as Red Right)
     indexer_system->setTopGoalMode();
     indexer_system->executeBack();
     pros::delay(1200);

@@ -51,7 +51,6 @@ Your motors use **6:1 blue cartridge gearing**:
 2. **Motor Control Functions**:
    - `runLeftIndexer()`: Now uses `move_velocity(speed)`
    - `runRightIndexer()`: Now uses `move_velocity(speed)`
-   - `runTopIndexer()`: Now uses `move_velocity(speed)`
    - `startInput()`: Now uses `move_velocity(speed)`
    - All stop functions updated to use `move_velocity(0)`
 

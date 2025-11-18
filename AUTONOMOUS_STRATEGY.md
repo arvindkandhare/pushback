@@ -53,8 +53,8 @@
 - **Positioning**: Accurate autonomous navigation capability
 
 ### Scoring Mechanisms
-- **Front Scoring**: Left middle motor + pneumatic flap + top indexer
-- **Back Scoring**: Right middle motor + top indexer (reversed)
+- **Front Scoring**: Left middle motor + pneumatic flap (intake-assisted feed for top goals)
+- **Back Scoring**: Right middle motor with intake-assisted feed (reversed)
 - **Intake**: Bottom input motor + pneumatic extension
 - **PTO System**: Switch between 3-wheel drive and 2-wheel scorer modes
 

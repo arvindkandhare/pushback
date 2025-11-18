@@ -418,7 +418,7 @@ void AutonomousSystem::executeRedLeftAWP() {
 
     pros::delay(50);
 
-    // TOP BACKSCORING - use back/top indexer
+    // TOP BACKSCORING - use back storage feed with right indexer
     indexer_system->setTopGoalMode();
     indexer_system->executeBack();
     pros::delay(1200);
