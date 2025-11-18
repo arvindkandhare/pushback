@@ -278,10 +278,7 @@ void AutonomousSystem::executeRedLeftBonus() {
     chassis->waitUntilDone();
 
     // FAST AWP SCORING
-    indexer_system->setMidGoalMode();
-    indexer_system->executeBack();
-    pros::delay(600); // Shorter delay for speed
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::MID_GOAL, ExecutionDirection::BACK, 600);
 
     printf("BONUS Phase 2: Maximum point collection\n");
     
@@ -303,10 +300,7 @@ void AutonomousSystem::executeRedLeftBonus() {
     chassis->waitUntilDone();
     
     // BONUS: Additional scoring opportunity
-    indexer_system->setMidGoalMode();
-    indexer_system->executeBack();
-    pros::delay(500); // Quick score
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::MID_GOAL, ExecutionDirection::BACK, 500);
     
     // Continue to match load zone faster (mirror of 225° → 315°)
     chassis->turnToHeading(315, 2000);
@@ -331,10 +325,7 @@ void AutonomousSystem::executeRedLeftBonus() {
     chassis->waitUntilDone();
 
     // FINAL HIGH-VALUE SCORING
-    indexer_system->setTopGoalMode();
-    indexer_system->executeBack();
-    pros::delay(1000); // Ensure all blocks are scored
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::TOP_GOAL, ExecutionDirection::BACK, 1000);
 
     printf("Left BONUS Complete!\n");
     autonomous_running = false;
@@ -370,10 +361,7 @@ void AutonomousSystem::executeRedLeftAWP() {
     chassis->waitUntilDone();
 
     // BACKSCORING MIDDLE - execute indexer back scoring sequence
-    indexer_system->setMidGoalMode();
-    indexer_system->executeBack();
-    pros::delay(700); // brief pause for scoring
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::MID_GOAL, ExecutionDirection::BACK, 700);
 
     pros::delay(50);
     
@@ -419,10 +407,7 @@ void AutonomousSystem::executeRedLeftAWP() {
     pros::delay(50);
 
     // TOP BACKSCORING - use back storage feed with right indexer
-    indexer_system->setTopGoalMode();
-    indexer_system->executeBack();
-    pros::delay(1200);
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::TOP_GOAL, ExecutionDirection::BACK, 1200);
 
     printf("Red Right AWP finished!\n");
 
@@ -456,10 +441,7 @@ void AutonomousSystem::executeRedRightBonus() {
     chassis->waitUntilDone();
 
     // FAST AWP SCORING
-    indexer_system->setMidGoalMode();
-    indexer_system->executeBack();
-    pros::delay(600); // Shorter delay for speed
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::MID_GOAL, ExecutionDirection::BACK, 600);
 
     printf("BONUS Phase 2: Maximum point collection\n");
     
@@ -480,10 +462,7 @@ void AutonomousSystem::executeRedRightBonus() {
     chassis->waitUntilDone();
     
     // BONUS: Additional scoring opportunity
-    indexer_system->setMidGoalMode();
-    indexer_system->executeBack();
-    pros::delay(500); // Quick score
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::MID_GOAL, ExecutionDirection::BACK, 500);
     
     // Continue to match load zone faster
     chassis->turnToHeading(225, 2000);
@@ -507,10 +486,7 @@ void AutonomousSystem::executeRedRightBonus() {
     chassis->waitUntilDone();
 
     // FINAL HIGH-VALUE SCORING
-    indexer_system->setTopGoalMode();
-    indexer_system->executeBack();
-    pros::delay(1000); // Ensure all blocks are scored
-    indexer_system->stopAll();
+    indexer_system->runAutonomousScore(ScoringMode::TOP_GOAL, ExecutionDirection::BACK, 1000);
 
     printf("BONUS Route Complete!\n");
     autonomous_running = false;

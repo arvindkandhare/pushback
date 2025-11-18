@@ -413,6 +413,60 @@ void IndexerSystem::stopAll() {
            scoring_active, input_motor_active, (int)last_direction);
 }
 
+void IndexerSystem::runAutonomousScore(ScoringMode mode, ExecutionDirection direction, uint32_t runtime_ms, bool stop_after) {
+    printf("DEBUG: runAutonomousScore(mode=%d, direction=%d, runtime=%u, stop=%d)\n",
+           static_cast<int>(mode), static_cast<int>(direction), runtime_ms, stop_after);
+
+    switch (mode) {
+        case ScoringMode::COLLECTION:
+            setCollectionMode();
+            break;
+        case ScoringMode::MID_GOAL:
+            setMidGoalMode();
+            break;
+        case ScoringMode::LOW_GOAL:
+            setLowGoalMode();
+            break;
+        case ScoringMode::TOP_GOAL:
+            setTopGoalMode();
+            break;
+        case ScoringMode::NONE:
+        default:
+            printf("DEBUG: runAutonomousScore called with NONE/invalid mode\n");
+            if (stop_after) {
+                stopAll();
+            }
+            return;
+    }
+
+    switch (direction) {
+        case ExecutionDirection::FRONT:
+            executeFront();
+            break;
+        case ExecutionDirection::BACK:
+            executeBack();
+            break;
+        case ExecutionDirection::STORAGE:
+            startIntakeAndStorage();
+            break;
+        case ExecutionDirection::NONE:
+        default:
+            printf("DEBUG: runAutonomousScore called with NONE/invalid direction\n");
+            if (stop_after) {
+                stopAll();
+            }
+            return;
+    }
+
+    if (runtime_ms > 0) {
+        pros::delay(runtime_ms);
+    }
+
+    if (stop_after) {
+        stopAll();
+    }
+}
+
 ScoringMode IndexerSystem::getCurrentMode() const {
     return current_mode;
 }

@@ -160,6 +160,15 @@ public:
     void stopAll();
 
     /**
+     * Run a scoring sequence for autonomous routines.
+     * @param mode Scoring mode to select before execution.
+     * @param direction Execution direction to use.
+     * @param runtime_ms How long to keep the sequence running before optional stop.
+     * @param stop_after When true stopAll() is called after the runtime delay.
+     */
+    void runAutonomousScore(ScoringMode mode, ExecutionDirection direction, uint32_t runtime_ms, bool stop_after = true);
+
+    /**
      * Get current scoring mode
      * @return Current scoring mode
      */
