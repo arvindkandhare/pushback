@@ -28,6 +28,8 @@
  */
 class Intake {
 private:
+    pros::adi::Pneumatics intake_pneumatic;      ///< Pneumatic intake piston (port D)
+    bool intake_extended;                        ///< Current pneumatic state (true = extended)
     pros::Motor front_loader_motor;              ///< Front match loader motor (port 7)
     pros::adi::AnalogIn front_loader_sensor;     ///< Front loader position sensor (potentiometer or similar)
     bool front_loader_deployed;                 ///< Current state (true = deployed, false = retracted)

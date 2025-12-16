@@ -52,6 +52,10 @@
 // Controls flap that holds balls for front scoring
 #define FRONT_FLAP_PNEUMATIC    'B'  // ADI port B (moved from C)
 
+// Intake pneumatic (port D)
+// Controls simple extend/retract intake piston
+#define INTAKE_PNEUMATIC        'D'  // ADI port D
+
 // =============================================================================
 // FRONT MATCH LOADER CONFIGURATION  
 // =============================================================================
@@ -141,6 +145,10 @@
 // Front flap pneumatic states
 #define FRONT_FLAP_OPEN   true  // Open = balls can score through front (reversed due to wiring)
 #define FRONT_FLAP_CLOSED false   // Closed = balls held against flap (reversed due to wiring)
+
+// Intake pneumatic states
+#define INTAKE_EXTENDED   true   // Extended = intake mechanism deployed
+#define INTAKE_RETRACTED  false  // Retracted = intake mechanism stored (default)
 
 // Default PTO state on robot startup
 #define PTO_DEFAULT_STATE PTO_EXTENDED

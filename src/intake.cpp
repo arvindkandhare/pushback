@@ -9,14 +9,16 @@
 #include <climits>  // For INT_MAX and INT_MIN
 
 Intake::Intake() 
-    : front_loader_motor(FRONT_LOADER_MOTOR_PORT),
-      front_loader_sensor(FRONT_LOADER_ENCODER_TOP),
-      front_loader_deployed(FRONT_LOADER_DEFAULT_STATE),
-      front_loader_target_position(FRONT_LOADER_RETRACTED_POSITION),
-      last_button_state(false),
-      last_l1_button_state(false),
-      last_l2_button_state(false),
-      sensor_zero_value(0.0) {
+        : intake_pneumatic(INTAKE_PNEUMATIC, INTAKE_RETRACTED),
+            intake_extended(false),
+            front_loader_motor(FRONT_LOADER_MOTOR_PORT),
+            front_loader_sensor(FRONT_LOADER_ENCODER_TOP),
+            front_loader_deployed(FRONT_LOADER_DEFAULT_STATE),
+            front_loader_target_position(FRONT_LOADER_RETRACTED_POSITION),
+            last_button_state(false),
+            last_l1_button_state(false),
+            last_l2_button_state(false),
+            sensor_zero_value(0.0) {
     
     // Configure motor
     front_loader_motor.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
@@ -74,6 +76,10 @@ Intake::Intake()
         retract();
     }
     
+    // Ensure intake pneumatic starts retracted
+    intake_pneumatic.set_value(INTAKE_RETRACTED);
+    intake_extended = false;
+
     // Print initial debug info
     printDebugInfo();
 }
@@ -174,7 +180,7 @@ bool Intake::isAtTarget() const {
 
 void Intake::update(pros::Controller& controller) {
     // Get current button states
-    bool current_button_state = controller.get_digital(INTAKE_TOGGLE_BUTTON);
+    bool current_button_state = controller.get_digital(INTAKE_TOGGLE_BUTTON); // DOWN -> intake pneumatic
     bool current_l1_button_state = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1);
     bool current_l2_button_state = controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2);
     
@@ -182,22 +188,19 @@ void Intake::update(pros::Controller& controller) {
     static uint32_t last_debug_print = 0;
     uint32_t current_time = pros::millis();
     if (current_time - last_debug_print > 1000) {
-        printf("Front Loader Button States: L1=%s L2=%s DOWN=%s\n", 
+        printf("Intake Controls: L1=%s L2=%s DOWN(piston)=%s\n", 
                current_l1_button_state ? "PRESSED" : "released",
                current_l2_button_state ? "PRESSED" : "released", 
                current_button_state ? "PRESSED" : "released");
         last_debug_print = current_time;
     }
     
-    // Check for toggle button press (rising edge detection) - resets to original position
+    // Check for DOWN toggle button press (rising edge) - control intake piston on port D
     if (current_button_state && !last_button_state) {
-        printf("Front Loader: Toggle button pressed! Resetting to original position\n");
-        printf("  Before reset - Position: %.1f° (motor: %.1f°)\n", getPosition(), getMotorPosition());
-        
-        resetToOriginal();
-        
-        printf("  After reset - Target: %.1f°, State: %s\n", front_loader_target_position, getCurrentStateString());
-        
+        intake_extended = !intake_extended;
+        intake_pneumatic.set_value(intake_extended ? INTAKE_EXTENDED : INTAKE_RETRACTED);
+        printf("Intake Piston (port D): %s\n", intake_extended ? "EXTENDED" : "RETRACTED");
+
         // Provide haptic feedback - different pattern from PTO
         controller.rumble("..");
     }
